@@ -1,0 +1,126 @@
+# CLAUDE.md
+
+Guidance for Claude Code (and any other contributor, human or otherwise) working in
+this repository. `docs/SPEC.md` is the authoritative spec — this file exists so the
+non-negotiable invariants are visible from day one, not retrofitted after a bug
+proves they were needed.
+
+## What this project is
+
+A group expense-sharing API (Splitwise-style): FastAPI (sync SQLAlchemy 2.0) +
+PostgreSQL backend, React/TypeScript frontend. See `docs/SPEC.md` for the full
+spec — section numbers there are stable and cited throughout this file and the
+codebase.
+
+The two hard problems are rounding money without losing cents (§6) and debt
+simplification (§5). Everything else is ordinary CRUD.
+
+## Invariants (docs/SPEC.md §8)
+
+These must hold **at all times**. Every one of them has caused a real bug in a
+previous version of a system like this — that's why each is called out explicitly
+instead of trusted to "obviously" fall out of correct code.
+
+### 8.1 Net balances within a group sum to exactly 0
+
+Enforce this as a mechanism, not a habit: a pytest fixture with `autouse=True` that
+runs after **every** test, walks every group in the database, and asserts
+`sum(net_balance) == Decimal("0.00")`. This turns every test in the suite into an
+invariant test and catches almost every class of bug in this system, rounding
+errors included. (See `tests/conftest.py::_assert_balances_sum_to_zero`.)
+
+### 8.2 Expense splits sum to the expense amount exactly
+
+Assert this in application code before committing the transaction — not only in
+tests. On mismatch, roll back.
+
+### 8.3 Money is Decimal everywhere, never float
+
+- Python: `decimal.Decimal`
+- SQLAlchemy: `Numeric(12, 2)`
+- Pydantic: `condecimal(max_digits=12, decimal_places=2)`
+- **Never convert to float at any point, not even once, not even in a log line.**
+
+### 8.4 Balances are computed live, never cached
+
+There is deliberately no `balances` table. A stored balance column would reproduce
+the classic lost-update race: two concurrent expense inserts both read the old
+balance and write back conflicting totals, and nobody ever finds out. Live
+computation has no state to corrupt — it's slower at scale, and that trade is
+correct here. If caching ever becomes necessary, it needs a materialized view or a
+guarded write with a version column — never a naive `UPDATE ... SET amount = amount + ?`.
+
+### 8.5 Group-level authorization on every group-scoped endpoint
+
+Authentication middleware only establishes *who you are*. Verifying *whether you
+belong to this group* must happen in the handler, or in a dependency that receives
+`group_id`. Non-members get **403** — not 404, not 401.
+
+### 8.6 Expense participants must belong to the group
+
+A non-member listed as a participant is a 400.
+
+### 8.7 A settlement's payer and recipient must differ
+
+Enforced by a database CHECK constraint and validated in Pydantic.
+
+### 8.8 Remainder distribution is deterministic
+
+Always a fixed, reproducible order. No sets, no unordered dict iteration.
+
+## Two extra rules
+
+### `app/services/splitting.py` must stay a pure module
+
+It may **not** import SQLAlchemy or FastAPI, ever. It computes splits from plain
+Python values (`Decimal`s and IDs) and returns plain Python values. This keeps the
+split-calculation logic (§6) testable as pure logic — including the hypothesis
+property tests — with no database or web framework in the loop, and keeps it usable
+from a script, a different endpoint, or a future async path without dragging a sync
+`Session` along.
+
+### Removing the last member never deletes the group
+
+When the last member leaves a group, let the group become empty. **Never
+auto-delete the group** — deleting it would destroy expense history, which
+contradicts the rule that removing a member must keep their expense history intact
+(§9, "Group membership"). An empty group with historical expenses is a valid,
+permanent state.
+
+## Project layout
+
+```
+app/
+  main.py           FastAPI app + route registration
+  config.py         pydantic-settings, loads .env
+  database.py       SQLAlchemy engine + SessionLocal (sync)
+  models/           ORM models, one file per entity
+  schemas/          Pydantic v2 request/response schemas
+  services/         business logic (splitting, balances, debt simplification, auth)
+  routers/          FastAPI routers
+tests/
+  conftest.py       TEST_DATABASE_URL fixtures, per-test rollback, §8.1 autouse check
+alembic/            migrations
+```
+
+## Working conventions
+
+- **Sync SQLAlchemy, not async.** FastAPI runs sync endpoints in a threadpool
+  automatically; async SQLAlchemy adds session-management and greenlet complexity
+  for no benefit at this scale (§2).
+- **Tests never run against the dev database.** `tests/conftest.py` refuses to
+  start if `TEST_DATABASE_URL`'s database name doesn't contain `test` (§10.7).
+- **Branch per feature, PRs only** — never push directly to `main` (§10.10). Never
+  commit `.env`; if one is ever committed, adding it to `.gitignore` afterwards does
+  not remove it from history.
+- **401 vs 403** (§10.2): 401 = not authenticated, 403 = authenticated but not
+  permitted. The login/register endpoints are exempt from any global 401 interceptor
+  on the frontend (§10.3).
+- **Login failures are indistinguishable** (§10.4): "email not found" and "wrong
+  password" must return byte-for-byte identical responses.
+- **Never say "minimum" or "optimal" about debt simplification** (§5) in API docs,
+  README, or any user-facing string — the greedy algorithm guarantees at most N−1
+  transfers but is not a proven minimum (that's NP-hard). Use "simplified" or
+  "reduced".
+- **A check is not a lock** (§10.9): rely on DB constraints (`UNIQUE`, `CHECK`) for
+  concurrency safety, not a preceding `if`.
