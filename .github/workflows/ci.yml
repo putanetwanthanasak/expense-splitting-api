@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Always an ephemeral service container, never a real/cloud database (§13).
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_splitting
+  # Name must contain "test" — tests/conftest.py refuses to run otherwise (§10.7).
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_splitting_test
+  JWT_SECRET: ci-only-secret-not-for-production-use
+  JWT_ALGORITHM: HS256
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      # 1. checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. PostgreSQL 16 service container is declared above, with a health check
+      #    that gates step execution until the database accepts connections.
+      - name: Create databases
+        run: |
+          psql -h localhost -U postgres -c "CREATE DATABASE expense_splitting;"
+          psql -h localhost -U postgres -c "CREATE DATABASE expense_splitting_test;"
+        env:
+          PGPASSWORD: postgres
+
+      # 3. setup Python 3.12 + install uv (with caching)
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      # 4. uv sync
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # 5. alembic upgrade head, against the empty database created above
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      # 6. ruff check .
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      # 7. mypy app
+      - name: Type check (mypy)
+        run: uv run mypy app
+
+      # 8. pytest
+      - name: Test (pytest)
+        run: uv run pytest -v
