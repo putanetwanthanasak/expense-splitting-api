@@ -10,11 +10,13 @@ from decimal import Decimal
 from urllib.parse import urlparse
 
 import pytest
-from sqlalchemy import create_engine
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
-from app.database import Base, _psycopg_url
+from app.database import Base, _psycopg_url, get_db
+from app.main import app
 from app.models import Group, GroupMember
 from app.services.balances import compute_group_net_balances
 
@@ -47,13 +49,31 @@ def _create_schema() -> Generator[None, None, None]:
 
 @pytest.fixture
 def db_session() -> Generator[Session, None, None]:
-    """Per-test transaction rollback (§10.7): every test runs inside a transaction
-    that is rolled back at the end, so tests never leak state into one another and
-    never need to delete rows by hand.
+    """Per-test transaction rollback (§10.7): every test runs inside an outer
+    transaction that is rolled back at the end, so tests never leak state into one
+    another and never need to delete rows by hand.
+
+    Application code under test calls `session.commit()` (e.g. registering a
+    user, per §7). A plain commit on a session bound directly to this connection
+    would end the outer transaction early and defeat the rollback above, so the
+    session instead runs inside a SAVEPOINT: every commit/rollback the app code
+    issues releases or rolls back that SAVEPOINT, and the `after_transaction_end`
+    listener immediately opens a new one — restoring it whether the previous one
+    ended via commit *or* via a rollback after an error (e.g. the duplicate-email
+    IntegrityError path). This is SQLAlchemy's documented recipe for joining a
+    Session into an external transaction for test suites.
     """
     connection = test_engine.connect()
     transaction = connection.begin()
     session = TestSessionLocal(bind=connection)
+
+    nested = connection.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def _restart_savepoint(session: Session, transaction_: object) -> None:
+        nonlocal nested
+        if not nested.is_active:
+            nested = connection.begin_nested()
 
     try:
         yield session
@@ -61,6 +81,24 @@ def db_session() -> Generator[Session, None, None]:
         session.close()
         transaction.rollback()
         connection.close()
+
+
+@pytest.fixture
+def client(db_session: Session) -> Generator[TestClient, None, None]:
+    """A TestClient wired to the same per-test transaction as db_session, so
+    requests made through it and assertions made directly against db_session see
+    the same (rolled-back-at-the-end) data.
+    """
+
+    def _get_db_override() -> Generator[Session, None, None]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = _get_db_override
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture(autouse=True)
