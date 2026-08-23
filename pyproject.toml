@@ -12,7 +12,12 @@ dependencies = [
     "pydantic-settings>=2.4",
     "pyjwt>=2.9",
     "passlib[bcrypt]>=1.7",
+    # passlib 1.7.4 (last released 2020, unmaintained) probes the bcrypt backend in
+    # a way that raises ValueError on bcrypt>=4.1 — pin below that until passlib
+    # ships a fix. See https://github.com/pyca/bcrypt/issues/684.
+    "bcrypt<4.1",
     "python-multipart>=0.0.9",
+    "email-validator>=2.2",
 ]
 
 [dependency-groups]
