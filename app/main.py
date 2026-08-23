@@ -10,4 +10,6 @@ app = FastAPI(title="Expense Splitting API")
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    # TEMPORARY: deliberately broken to prove CI actually goes red (SPEC.md §10.8).
+    # This commit is reverted immediately after CI confirms the failure.
+    raise RuntimeError("intentionally broken for CI verification")
