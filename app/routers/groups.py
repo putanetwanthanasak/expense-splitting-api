@@ -74,7 +74,12 @@ def add_group_member(
     try:
         member = add_member(db, group_id=group_id, user_id=payload.user_id)
     except UserNotFoundError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found") from exc
+        # 400, not 404: user_id is a reference inside the request body, not the
+        # resource named by the URL path. Same pattern as §8.6 (a non-member
+        # participant on an expense is a 400) and the settlement edge case
+        # "paying someone outside the group -> 400" (§9) — 404 is reserved for
+        # a missing path resource, e.g. the group itself.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No such user") from exc
     except AlreadyMemberError as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT, "User is already a member of this group"

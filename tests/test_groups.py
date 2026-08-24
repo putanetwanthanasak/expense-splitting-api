@@ -133,7 +133,11 @@ def test_adding_duplicate_member_returns_409(client: TestClient) -> None:
     assert dup.status_code == 409
 
 
-def test_adding_nonexistent_user_returns_404(client: TestClient) -> None:
+def test_adding_nonexistent_user_returns_400(client: TestClient) -> None:
+    """user_id is a body reference, not the URL path resource, so a nonexistent
+    one is a 400 — same pattern as §8.6 (non-member participant -> 400), not a
+    404 (§9: 404 is reserved for a missing path resource, e.g. the group).
+    """
     _, owner_token, _ = _new_user(client)
     group_id = _create_group(client, owner_token, "Trip")
 
@@ -142,7 +146,7 @@ def test_adding_nonexistent_user_returns_404(client: TestClient) -> None:
         json={"user_id": str(uuid.uuid4())},
         headers=_auth(owner_token),
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 400
 
 
 def test_removing_last_member_leaves_group_empty_but_not_deleted(client: TestClient) -> None:
