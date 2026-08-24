@@ -5,12 +5,13 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.routers import auth, users
+from app.routers import auth, groups, users
 
 app = FastAPI(title="Expense Splitting API")
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(groups.router)
 
 
 # Centralized error handling (§10.6): every route's error goes through one of

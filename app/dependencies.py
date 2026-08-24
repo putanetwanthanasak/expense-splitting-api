@@ -1,5 +1,6 @@
 """FastAPI dependencies shared across routers."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -7,6 +8,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.group import Group
+from app.models.group_member import GroupMember
 from app.models.user import User
 from app.services.security import InvalidTokenError, decode_access_token
 
@@ -53,3 +56,42 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_group_member(
+    group_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> Group:
+    """FastAPI dependency verifying `current_user` belongs to `group_id` (§8.5).
+
+    `get_current_user` only answers "who are you"; this answers "are you in this
+    group". Every group-scoped endpoint that takes `{id}` must depend on this
+    (directly, or via a path that includes it), not just call `get_current_user`.
+
+    Non-members get 403 — never 404. A group that doesn't exist and a group the
+    caller isn't a member of are deliberately indistinguishable to the caller, so
+    this doesn't leak which group ids exist. Never 401 either: 401 is reserved
+    for "not authenticated at all", which `get_current_user` already handled by
+    the time this dependency runs.
+    """
+    is_member = (
+        db.query(GroupMember)
+        .filter(GroupMember.group_id == group_id, GroupMember.user_id == current_user.id)
+        .first()
+        is not None
+    )
+    if not is_member:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not a member of this group")
+
+    group = db.get(Group, group_id)
+    if group is None:
+        # Unreachable given the group_members.group_id FK: a membership row can't
+        # exist for a group that doesn't. Guarded rather than asserted so a bug
+        # elsewhere surfaces as a clean 403, not a 500.
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not a member of this group")
+
+    return group
+
+
+RequireGroupMember = Annotated[Group, Depends(require_group_member)]
