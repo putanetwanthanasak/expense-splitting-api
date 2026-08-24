@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.expense import Expense
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
@@ -95,3 +96,38 @@ def require_group_member(
 
 
 RequireGroupMember = Annotated[Group, Depends(require_group_member)]
+
+
+def require_expense_membership(
+    expense_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> Expense:
+    """FastAPI dependency for the endpoints keyed by expense_id rather than
+    group_id directly (GET/PATCH/DELETE /api/expenses/{id}, §7): resolves the
+    expense, then applies the same group-membership check as
+    require_group_member (§8.5) against the expense's own group_id.
+
+    Unlike require_group_member, a missing expense IS a plain 404 here, not
+    folded into 403 alongside "not a member": expense ids are opaque, unguessable
+    UUIDs this API hands out, never something a client enumerates the way it
+    might probe small/sequential group ids, so there's no existence signal worth
+    hiding by making the two cases indistinguishable.
+    """
+    expense = db.get(Expense, expense_id)
+    if expense is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Expense not found")
+
+    is_member = (
+        db.query(GroupMember)
+        .filter(GroupMember.group_id == expense.group_id, GroupMember.user_id == current_user.id)
+        .first()
+        is not None
+    )
+    if not is_member:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not a member of this group")
+
+    return expense
+
+
+RequireExpenseMembership = Annotated[Expense, Depends(require_expense_membership)]
