@@ -1,5 +1,6 @@
 """POST /api/groups, GET /api/groups, GET /api/groups/{id},
-POST /api/groups/{id}/members, DELETE /api/groups/{id}/members/{uid} (§7).
+POST /api/groups/{id}/members, DELETE /api/groups/{id}/members/{uid},
+GET /api/groups/{id}/balances, GET /api/groups/{id}/settle-up (§7).
 """
 
 import uuid
@@ -10,7 +11,9 @@ from app.dependencies import CurrentUser, DbSession, RequireGroupMember
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
+from app.schemas.balance import BalanceOut, GroupBalancesOut, SettleUpOut, TransferOut
 from app.schemas.group import AddMemberRequest, GroupCreate, GroupDetail, GroupMemberOut, GroupOut
+from app.services.balances import compute_group_net_balances
 from app.services.groups import (
     AlreadyMemberError,
     MemberNotFoundError,
@@ -19,6 +22,7 @@ from app.services.groups import (
     create_group,
     remove_member,
 )
+from app.services.simplify import simplify_debts
 
 router = APIRouter(prefix="/api/groups", tags=["groups"])
 
@@ -89,6 +93,41 @@ def add_group_member(
     assert user is not None  # add_member already confirmed this user exists
     return GroupMemberOut(
         user_id=user.id, email=user.email, name=user.name, joined_at=member.joined_at
+    )
+
+
+@router.get("/{group_id}/balances", response_model=GroupBalancesOut)
+def get_group_balances(
+    group_id: uuid.UUID, group: RequireGroupMember, db: DbSession
+) -> GroupBalancesOut:
+    """Net balance for every current member (§4), computed live -- never cached
+    (§8.4). Sorted by user_id for a deterministic response order (§8.8's
+    reproducibility spirit applies here too), not whatever order the query
+    happens to return.
+    """
+    balances = compute_group_net_balances(db, group_id)
+    ordered = [
+        BalanceOut(user_id=user_id, net_balance=net)
+        for user_id, net in sorted(balances.items(), key=lambda item: item[0])
+    ]
+    return GroupBalancesOut(balances=ordered)
+
+
+@router.get("/{group_id}/settle-up", response_model=SettleUpOut)
+def get_group_settle_up(
+    group_id: uuid.UUID, group: RequireGroupMember, db: DbSession
+) -> SettleUpOut:
+    """Simplified transfer list (§5) that would bring every member's balance to
+    zero. The `note` field is required reading, not decoration: the algorithm is
+    a greedy heuristic, not a proven minimum (§5, CLAUDE.md).
+    """
+    balances = compute_group_net_balances(db, group_id)
+    transfers = simplify_debts(balances)
+    return SettleUpOut(
+        transfers=[
+            TransferOut(from_user_id=t.from_user_id, to_user_id=t.to_user_id, amount=t.amount)
+            for t in transfers
+        ]
     )
 
 
