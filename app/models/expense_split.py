@@ -20,7 +20,13 @@ class ExpenseSplit(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    expense_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("expenses.id"), nullable=False)
+    # ondelete="CASCADE": deleting an expense must take its splits with it (§9
+    # "DELETE -> splits cascade, and balances change immediately") — enforced at
+    # the database level, not by the application remembering to delete children
+    # first (§10.9: a check, or a manual delete-then-delete, is not a lock).
+    expense_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     # Money is ALWAYS Numeric(12, 2), never Float. See docs/SPEC.md §8.3.
     amount_owed: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
