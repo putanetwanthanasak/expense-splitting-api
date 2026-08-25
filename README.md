@@ -36,27 +36,36 @@ cent, then hand out the leftover cents one at a time, in a fixed order, until
 the shares sum back to the original total exactly.
 
 ```python
-def split_equally(total: Decimal, user_ids: list[UUID]) -> dict[UUID, Decimal]:
-    cent = Decimal("0.01")
-    base = (total / len(user_ids)).quantize(cent, rounding=ROUND_DOWN)
-    shares = {uid: base for uid in user_ids}
+def _distribute_largest_remainder(
+    total: Decimal,
+    ideal_shares: Mapping[uuid.UUID, Decimal],
+    order: Sequence[uuid.UUID],
+) -> dict[uuid.UUID, Decimal]:
+    """Round every ideal share down to the cent, then hand out the leftover
+    cents one at a time to make the rounded shares sum back to `total` exactly.
+    """
+    shares = {uid: ideal_shares[uid].quantize(CENT, rounding=ROUND_DOWN) for uid in order}
 
-    remainder = total - base * len(user_ids)          # e.g. 100.00 - 99.99 = 0.01
-    extra_cents = int(remainder / cent)                # e.g. 1
-    for uid in user_ids[:extra_cents]:                 # always this same order
-        shares[uid] += cent
+    remainder = total - sum(shares.values(), start=Decimal("0.00"))
+    extra_cents = int(remainder / CENT)
 
-    assert sum(shares.values(), start=Decimal("0.00")) == total  # never merely hoped for
+    for i in range(extra_cents):
+        shares[order[i]] += CENT
+
+    assert sum(shares.values(), start=Decimal("0.00")) == total, (
+        "largest remainder distribution did not sum to the total — this is a bug "
+        "in splitting.py, not a caller error"
+    )
     return shares
 ```
 
-Splitting `100.00` three ways gives `33.34, 33.33, 33.33` — summing to
-exactly `100.00`. Every split type (`EQUAL`, `EXACT`, `PERCENTAGE`,
-`SHARES`) goes through the same remainder-distribution logic in
-`app/services/splitting.py`, which is asserted against real data in
-`app/services/expenses.py` before any transaction commits, and property-tested
-against thousands of random totals and participant counts in
-`tests/test_split_calculation.py`.
+`split_equally`, `split_exact`, `split_by_percentage`, and `split_by_shares`
+all validate their own inputs and then call this same helper to do the actual
+rounding. Splitting `100.00` three ways gives `33.34, 33.33, 33.33` — summing
+to exactly `100.00`. This logic (`app/services/splitting.py`) is asserted
+against real data in `app/services/expenses.py` before any transaction
+commits, and property-tested against thousands of random totals and
+participant counts in `tests/test_split_calculation.py`.
 
 ### Debt simplification
 
