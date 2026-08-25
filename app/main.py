@@ -7,7 +7,16 @@ from fastapi.responses import JSONResponse
 
 from app.routers import auth, expenses, groups, settlements, users
 
-app = FastAPI(title="Expense Splitting API")
+app = FastAPI(
+    title="Expense Splitting API",
+    description=(
+        "A group expense-sharing API (Splitwise-style). Members record expenses "
+        "paid on each other's behalf; the API computes who owes whom and "
+        "proposes a reduced set of repayments. See docs/SPEC.md in the repo "
+        "for the full specification."
+    ),
+    version="0.1.0",
+)
 
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -35,6 +44,7 @@ async def validation_exception_handler(
     )
 
 
-@app.get("/health")
+@app.get("/health", summary="Health check", tags=["health"])
 def health() -> dict[str, str]:
+    """Liveness probe. No authentication required."""
     return {"status": "ok"}

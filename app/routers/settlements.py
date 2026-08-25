@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/groups", tags=["settlements"])
     "/{group_id}/settlements",
     response_model=SettlementRecordOut,
     status_code=status.HTTP_201_CREATED,
+    summary="Record a settlement",
 )
 def create(
     group_id: uuid.UUID,
@@ -27,6 +28,12 @@ def create(
     group: RequireGroupMember,
     db: DbSession,
 ) -> SettlementRecordOut:
+    """Record that from_user_id repaid to_user_id (§1: this is only a record --
+    no real payment is processed). Both users must be group members and must
+    differ (§8.7), and amount must be positive. Paying more than currently
+    owed is allowed and returns a `warning` -- the payer becomes a net
+    creditor as a result.
+    """
     try:
         settlement, warning = record_settlement(
             db,
@@ -49,8 +56,13 @@ def create(
     )
 
 
-@router.get("/{group_id}/settlements", response_model=list[SettlementOut])
+@router.get(
+    "/{group_id}/settlements",
+    response_model=list[SettlementOut],
+    summary="List settlement history",
+)
 def list_settlements(
     group_id: uuid.UUID, group: RequireGroupMember, db: DbSession
 ) -> list[Settlement]:
+    """This group's recorded settlements, newest first."""
     return list_group_settlements(db, group_id)

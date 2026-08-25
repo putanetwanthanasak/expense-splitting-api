@@ -17,16 +17,29 @@ from app.services.security import create_access_token
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+)
 def register(payload: RegisterRequest, db: DbSession) -> User:
+    """Create an account. No roles or permissions -- every registered user is
+    equal (§7).
+    """
     try:
         return register_user(db, email=payload.email, password=payload.password, name=payload.name)
     except EmailAlreadyRegisteredError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email is already registered") from exc
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, summary="Log in")
 def login(payload: LoginRequest, db: DbSession) -> TokenResponse:
+    """Exchange an email + password for a JWT access token.
+
+    §10.4: an unknown email and a wrong password return byte-for-byte
+    identical error responses, so a caller can never tell which one it was.
+    """
     try:
         user = authenticate_user(db, email=payload.email, password=payload.password)
     except InvalidCredentialsError as exc:
