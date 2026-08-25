@@ -87,6 +87,7 @@ def _to_detail(db: DbSession, expense: Expense) -> ExpenseDetail:
     "/api/groups/{group_id}/expenses",
     response_model=ExpenseDetail,
     status_code=status.HTTP_201_CREATED,
+    summary="Create an expense",
 )
 def create(
     group_id: uuid.UUID,
@@ -94,6 +95,12 @@ def create(
     group: RequireGroupMember,
     db: DbSession,
 ) -> ExpenseDetail:
+    """Create an expense and compute its splits (§6) in one transaction. The
+    split shape is chosen by `split_type`: EQUAL takes a participant list;
+    EXACT/PERCENTAGE/SHARES each take a per-participant value. Every
+    participant (and the payer) must already be a group member, or this is a
+    400 (§8.6).
+    """
     participant_user_ids, exact_amounts, percentages, shares = _split_fields(payload)
     try:
         expense = create_expense(
@@ -115,7 +122,9 @@ def create(
     return _to_detail(db, expense)
 
 
-@router.get("/api/groups/{group_id}/expenses", response_model=ExpenseListOut)
+@router.get(
+    "/api/groups/{group_id}/expenses", response_model=ExpenseListOut, summary="List group expenses"
+)
 def list_expenses(
     group_id: uuid.UUID,
     group: RequireGroupMember,
@@ -123,6 +132,7 @@ def list_expenses(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> ExpenseListOut:
+    """One page of a group's expenses, most recent expense_date first."""
     items, total = list_group_expenses(db, group_id, limit=limit, offset=offset)
     return ExpenseListOut(
         items=[ExpenseOut.model_validate(item) for item in items],
@@ -132,18 +142,28 @@ def list_expenses(
     )
 
 
-@router.get("/api/expenses/{expense_id}", response_model=ExpenseDetail)
+@router.get(
+    "/api/expenses/{expense_id}", response_model=ExpenseDetail, summary="Get expense details"
+)
 def get(expense_id: uuid.UUID, expense: RequireExpenseMembership, db: DbSession) -> ExpenseDetail:
+    """Expense details plus its splits."""
     return _to_detail(db, expense)
 
 
-@router.patch("/api/expenses/{expense_id}", response_model=ExpenseDetail)
+@router.patch(
+    "/api/expenses/{expense_id}", response_model=ExpenseDetail, summary="Update an expense"
+)
 def update(
     expense_id: uuid.UUID,
     payload: ExpenseWrite,
     expense: RequireExpenseMembership,
     db: DbSession,
 ) -> ExpenseDetail:
+    """Replace the expense's fields and recompute every split from scratch
+    (§9): all existing splits are deleted and recreated in one transaction,
+    never updated row by row. The request body describes the complete
+    expense, the same shape as POST -- a PATCH can't be partial.
+    """
     participant_user_ids, exact_amounts, percentages, shares = _split_fields(payload)
     try:
         updated = update_expense(
@@ -169,6 +189,13 @@ def update(
     return _to_detail(db, updated)
 
 
-@router.delete("/api/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/api/expenses/{expense_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an expense",
+)
 def delete(expense_id: uuid.UUID, expense: RequireExpenseMembership, db: DbSession) -> None:
+    """Delete an expense. Its splits cascade with it, and balances change
+    immediately -- there is nothing else referencing the deleted rows (§9).
+    """
     delete_expense(db, expense_id)

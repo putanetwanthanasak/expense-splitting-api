@@ -28,12 +28,17 @@ from app.services.simplify import simplify_debts
 router = APIRouter(prefix="/api/groups", tags=["groups"])
 
 
-@router.post("", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=GroupOut, status_code=status.HTTP_201_CREATED, summary="Create a group"
+)
 def create(payload: GroupCreate, current_user: CurrentUser, db: DbSession) -> Group:
+    """Create a group. The creator becomes a member immediately -- a group with
+    zero members is never observable, even transiently (§7).
+    """
     return create_group(db, name=payload.name, creator_id=current_user.id)
 
 
-@router.get("", response_model=list[GroupOut])
+@router.get("", response_model=list[GroupOut], summary="List my groups")
 def list_my_groups(current_user: CurrentUser, db: DbSession) -> list[Group]:
     """Only groups the caller belongs to — never other people's (§7)."""
     return (
@@ -45,8 +50,12 @@ def list_my_groups(current_user: CurrentUser, db: DbSession) -> list[Group]:
     )
 
 
-@router.get("/{group_id}", response_model=GroupDetail)
+@router.get("/{group_id}", response_model=GroupDetail, summary="Get group details")
 def get_group(group_id: uuid.UUID, group: RequireGroupMember, db: DbSession) -> GroupDetail:
+    """Group details plus its current member list. Non-members get 403, not
+    404 (§8.5) -- a group that doesn't exist and one the caller isn't in are
+    deliberately indistinguishable.
+    """
     rows = (
         db.query(GroupMember, User)
         .join(User, User.id == GroupMember.user_id)
@@ -68,7 +77,10 @@ def get_group(group_id: uuid.UUID, group: RequireGroupMember, db: DbSession) -> 
 
 
 @router.post(
-    "/{group_id}/members", response_model=GroupMemberOut, status_code=status.HTTP_201_CREATED
+    "/{group_id}/members",
+    response_model=GroupMemberOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a group member",
 )
 def add_group_member(
     group_id: uuid.UUID,
@@ -76,6 +88,10 @@ def add_group_member(
     group: RequireGroupMember,
     db: DbSession,
 ) -> GroupMemberOut:
+    """Add an existing user to the group. The caller must already be a member
+    (§8.5); adding a user who is already a member is a 409, and a user_id that
+    doesn't exist is a 400 (it's a body reference, not the URL's resource).
+    """
     try:
         member = add_member(db, group_id=group_id, user_id=payload.user_id)
     except UserNotFoundError as exc:
@@ -97,7 +113,9 @@ def add_group_member(
     )
 
 
-@router.get("/{group_id}/balances", response_model=GroupBalancesOut)
+@router.get(
+    "/{group_id}/balances", response_model=GroupBalancesOut, summary="Get group balances"
+)
 def get_group_balances(
     group_id: uuid.UUID, group: RequireGroupMember, db: DbSession
 ) -> GroupBalancesOut:
@@ -114,7 +132,11 @@ def get_group_balances(
     return GroupBalancesOut(balances=ordered)
 
 
-@router.get("/{group_id}/settle-up", response_model=SettleUpOut)
+@router.get(
+    "/{group_id}/settle-up",
+    response_model=SettleUpOut,
+    summary="Get simplified settle-up transfers",
+)
 def get_group_settle_up(
     group_id: uuid.UUID, group: RequireGroupMember, db: DbSession
 ) -> SettleUpOut:
@@ -132,13 +154,22 @@ def get_group_settle_up(
     )
 
 
-@router.delete("/{group_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{group_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a group member",
+)
 def remove_group_member(
     group_id: uuid.UUID,
     user_id: uuid.UUID,
     group: RequireGroupMember,
     db: DbSession,
 ) -> None:
+    """Remove a member from the group. 409 if their net balance isn't zero
+    (§8.1, §9) -- removing them would break the group's sum-to-zero invariant;
+    the response states the outstanding amount. A net-zero member can always
+    be removed, and their expense history is kept intact.
+    """
     try:
         remove_member(db, group_id=group_id, user_id=user_id)
     except MemberNotFoundError as exc:

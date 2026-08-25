@@ -70,14 +70,16 @@ Always a fixed, reproducible order. No sets, no unordered dict iteration.
 
 ## Two extra rules
 
-### `app/services/splitting.py` must stay a pure module
+### `app/services/splitting.py` and `app/services/simplify.py` must stay pure modules
 
-It may **not** import SQLAlchemy or FastAPI, ever. It computes splits from plain
-Python values (`Decimal`s and IDs) and returns plain Python values. This keeps the
-split-calculation logic (§6) testable as pure logic — including the hypothesis
-property tests — with no database or web framework in the loop, and keeps it usable
-from a script, a different endpoint, or a future async path without dragging a sync
-`Session` along.
+Neither may import SQLAlchemy or FastAPI, ever. `splitting.py` computes splits
+(§6) and `simplify.py` computes the debt-simplification transfer list (§5) — both
+take plain Python values (`Decimal`s and IDs) in and return plain Python values
+out. This keeps that logic testable as pure logic — including the hypothesis
+property tests in `tests/test_split_calculation.py` and
+`tests/test_debt_simplification.py` — with no database or web framework in the
+loop, and keeps it usable from a script, a different endpoint, or a future async
+path without dragging a sync `Session` along.
 
 ### Removing the last member never deletes the group
 
@@ -124,3 +126,11 @@ alembic/            migrations
   "reduced".
 - **A check is not a lock** (§10.9): rely on DB constraints (`UNIQUE`, `CHECK`) for
   concurrency safety, not a preceding `if`.
+- **A business rule that must return 400, enforced in Pydantic:** a plain
+  `ValueError` from a `model_validator` becomes a 422 (FastAPI's normal request-body
+  validation path), which is wrong for a rule §9 specifies as 400. Raise
+  `HTTPException(400, ...)` directly from the validator instead — Pydantic only
+  intercepts `ValueError`/`TypeError`/`AssertionError`, so an `HTTPException`
+  propagates unchanged to the app's existing `HTTPException` handler. See
+  `app/schemas/settlement.py`'s payer/recipient check (§8.7) for the pattern; use it
+  again rather than reinventing it for the next Pydantic-level rule that needs 400.
