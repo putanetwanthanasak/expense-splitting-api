@@ -16,6 +16,7 @@ from app.schemas.group import AddMemberRequest, GroupCreate, GroupDetail, GroupM
 from app.services.balances import compute_group_net_balances
 from app.services.groups import (
     AlreadyMemberError,
+    MemberHasOutstandingBalanceError,
     MemberNotFoundError,
     UserNotFoundError,
     add_member,
@@ -143,4 +144,16 @@ def remove_group_member(
     except MemberNotFoundError as exc:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "User is not a member of this group"
+        ) from exc
+    except MemberHasOutstandingBalanceError as exc:
+        # 409, not 400: the request is well-formed, it's the group's current
+        # state that forbids it (§8.1 -- removing them would break the
+        # sum-to-zero invariant). The outstanding amount goes in the body so
+        # the caller knows what has to be settled first.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "message": "Cannot remove a member with a non-zero balance",
+                "outstanding_balance": str(exc.net_balance),
+            },
         ) from exc

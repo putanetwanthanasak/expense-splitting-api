@@ -6,6 +6,7 @@ HTTP status codes.
 """
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,6 +14,9 @@ from sqlalchemy.orm import Session
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
+from app.services.balances import compute_group_net_balances
+
+ZERO = Decimal("0.00")
 
 
 class UserNotFoundError(Exception):
@@ -25,6 +29,20 @@ class AlreadyMemberError(Exception):
 
 class MemberNotFoundError(Exception):
     """Raised when removing a user who is not currently a member of the group."""
+
+
+class MemberHasOutstandingBalanceError(Exception):
+    """409: raised when removing a member whose net balance != 0 (§8.1, §9).
+
+    Allowing the removal would make the group's remaining balances stop
+    summing to zero -- there'd be no member left to "own" the departing
+    member's share of what they paid or are owed. Carries the balance itself
+    so the router can put the outstanding amount in the response body.
+    """
+
+    def __init__(self, net_balance: Decimal) -> None:
+        self.net_balance = net_balance
+        super().__init__(f"member has a non-zero net balance: {net_balance}")
 
 
 def create_group(db: Session, *, name: str, creator_id: uuid.UUID) -> Group:
@@ -63,24 +81,39 @@ def add_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> Group
 
 
 def remove_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    """Remove user_id from group_id. Raises MemberNotFoundError if they weren't a
-    member.
+    """Remove user_id from group_id.
 
-    TODO(§9 "Group membership"): once balances exist (Phase 8), a member with a
-    non-zero net balance must not be removable — that must become a 409 stating
-    the outstanding amount. There are no expenses/settlements yet in this phase,
-    so every current member's balance is trivially 0 and removal is always safe.
+    Raises MemberNotFoundError if they weren't a member, MemberHasOutstandingBalanceError
+    (409) if their net balance != 0 (§8.1, §9) -- removing them would leave no one
+    to own their share of the group's expenses/settlements, breaking the
+    sum-to-zero invariant. Both the membership lookup and the balance check run
+    against this same session, before the delete this function commits -- not a
+    separately-committed check beforehand (§10.9) -- so nothing about this
+    removal is visible to any other transaction until everything here has
+    validated.
+
+    If net == 0, removal is allowed even when the member has expense history:
+    only the group_members row is deleted here. Expense/ExpenseSplit rows
+    reference the user directly (paid_by_user_id / user_id), not the membership
+    row, so nothing cascades and that history survives intact (§9 "Removing a
+    member whose net is 0 but who has expense history -> allowed... history must
+    survive").
 
     Removing the last member is allowed: the group becomes empty but is never
     auto-deleted (see CLAUDE.md "Removing the last member never deletes the
     group") — deleting it would destroy expense history.
     """
-    deleted = (
+    member = (
         db.query(GroupMember)
         .filter(GroupMember.group_id == group_id, GroupMember.user_id == user_id)
-        .delete()
+        .first()
     )
-    if deleted == 0:
-        db.rollback()
+    if member is None:
         raise MemberNotFoundError
+
+    net_balance = compute_group_net_balances(db, group_id).get(user_id, ZERO)
+    if net_balance != ZERO:
+        raise MemberHasOutstandingBalanceError(net_balance)
+
+    db.delete(member)
     db.commit()
