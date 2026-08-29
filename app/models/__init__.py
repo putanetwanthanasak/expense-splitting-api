@@ -14,7 +14,7 @@ never a naive `UPDATE ... SET amount = amount + ?`.
 Every model is imported here so Alembic's autogenerate sees the full metadata.
 """
 
-from app.models.enums import SplitType
+from app.models.enums import MembershipStatus, SplitType
 from app.models.expense import Expense
 from app.models.expense_split import ExpenseSplit
 from app.models.group import Group
@@ -27,6 +27,7 @@ __all__ = [
     "ExpenseSplit",
     "Group",
     "GroupMember",
+    "MembershipStatus",
     "Settlement",
     "SplitType",
     "User",

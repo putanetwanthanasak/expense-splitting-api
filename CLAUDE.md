@@ -56,9 +56,17 @@ Authentication middleware only establishes *who you are*. Verifying *whether you
 belong to this group* must happen in the handler, or in a dependency that receives
 `group_id`. Non-members get **403** — not 404, not 401.
 
+"Member" means an **ACTIVE** member (SPEC §7.1). A `group_members` row is
+`PENDING` until the invitee accepts; a PENDING member is treated exactly like a
+stranger — 403 everywhere, absent from `/balances`, `/settle-up`, the group's
+member list, and `GET /api/groups` — with `accept`/`decline` as their only
+permitted actions. Every membership query that gates access or feeds a balance
+must filter `status == ACTIVE`.
+
 ### 8.6 Expense participants must belong to the group
 
-A non-member listed as a participant is a 400.
+A non-member listed as a participant is a 400 — and a PENDING member is not a
+member (§8.5), so their id here is the same 400.
 
 ### 8.7 A settlement's payer and recipient must differ
 

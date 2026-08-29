@@ -8,6 +8,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUser, DbSession, RequireGroupMember
+from app.models.enums import MembershipStatus
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
@@ -18,9 +19,12 @@ from app.services.groups import (
     AlreadyMemberError,
     MemberHasOutstandingBalanceError,
     MemberNotFoundError,
+    NoPendingInvitationError,
     UserNotFoundError,
+    accept_invitation,
     add_member,
     create_group,
+    decline_invitation,
     remove_member,
 )
 from app.services.simplify import simplify_debts
@@ -40,11 +44,17 @@ def create(payload: GroupCreate, current_user: CurrentUser, db: DbSession) -> Gr
 
 @router.get("", response_model=list[GroupOut], summary="List my groups")
 def list_my_groups(current_user: CurrentUser, db: DbSession) -> list[Group]:
-    """Only groups the caller belongs to — never other people's (§7)."""
+    """Only groups the caller is an ACTIVE member of — never other people's, and
+    never groups where the caller only has a PENDING invitation (§7.1: those
+    belong in GET /api/me/invitations instead).
+    """
     return (
         db.query(Group)
         .join(GroupMember, GroupMember.group_id == Group.id)
-        .filter(GroupMember.user_id == current_user.id)
+        .filter(
+            GroupMember.user_id == current_user.id,
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
         .order_by(Group.created_at, Group.id)
         .all()
     )
@@ -59,7 +69,14 @@ def get_group(group_id: uuid.UUID, group: RequireGroupMember, db: DbSession) -> 
     rows = (
         db.query(GroupMember, User)
         .join(User, User.id == GroupMember.user_id)
-        .filter(GroupMember.group_id == group_id)
+        .filter(
+            GroupMember.group_id == group_id,
+            # ACTIVE only (§7.1): a PENDING invitee is not a member, so they
+            # don't appear in the member list any more than they do in
+            # /balances. The invitee sees the pending invite via
+            # GET /api/me/invitations.
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
         .order_by(GroupMember.joined_at, GroupMember.id)  # deterministic, not DB-default order
         .all()
     )
@@ -111,6 +128,52 @@ def add_group_member(
     return GroupMemberOut(
         user_id=user.id, email=user.email, name=user.name, joined_at=member.joined_at
     )
+
+
+@router.post(
+    "/{group_id}/members/me/accept",
+    response_model=GroupMemberOut,
+    summary="Accept a group invitation",
+)
+def accept_group_invitation(
+    group_id: uuid.UUID, current_user: CurrentUser, db: DbSession
+) -> GroupMemberOut:
+    """Flip the caller's own PENDING membership in this group to ACTIVE (§7.1).
+
+    Deliberately does NOT depend on `require_group_member` — that would 403 a
+    PENDING invitee before this handler ever ran. 404 if the caller has no
+    PENDING row here (never invited, already ACTIVE, or already
+    declined/removed).
+    """
+    try:
+        member, user = accept_invitation(db, group_id=group_id, user_id=current_user.id)
+    except NoPendingInvitationError as exc:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "No pending invitation for you in this group"
+        ) from exc
+
+    return GroupMemberOut(
+        user_id=user.id, email=user.email, name=user.name, joined_at=member.joined_at
+    )
+
+
+@router.post(
+    "/{group_id}/members/me/decline",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Decline a group invitation",
+)
+def decline_group_invitation(
+    group_id: uuid.UUID, current_user: CurrentUser, db: DbSession
+) -> None:
+    """Delete the caller's own PENDING membership in this group (§7.1). Same
+    404 rule as accept, and likewise not gated by `require_group_member`.
+    """
+    try:
+        decline_invitation(db, group_id=group_id, user_id=current_user.id)
+    except NoPendingInvitationError as exc:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "No pending invitation for you in this group"
+        ) from exc
 
 
 @router.get(

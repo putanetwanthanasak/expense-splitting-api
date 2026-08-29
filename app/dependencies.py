@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.enums import MembershipStatus
 from app.models.expense import Expense
 from app.models.group import Group
 from app.models.group_member import GroupMember
@@ -75,10 +76,19 @@ def require_group_member(
     this doesn't leak which group ids exist. Never 401 either: 401 is reserved
     for "not authenticated at all", which `get_current_user` already handled by
     the time this dependency runs.
+
+    "Member" here means an ACTIVE member (§7.1). A PENDING invitee is treated
+    exactly like a stranger — 403 — which preserves the group-id-enumeration
+    protection above. Their only valid actions are accept/decline, which don't
+    depend on this.
     """
     is_member = (
         db.query(GroupMember)
-        .filter(GroupMember.group_id == group_id, GroupMember.user_id == current_user.id)
+        .filter(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == current_user.id,
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
         .first()
         is not None
     )
@@ -120,7 +130,11 @@ def require_expense_membership(
 
     is_member = (
         db.query(GroupMember)
-        .filter(GroupMember.group_id == expense.group_id, GroupMember.user_id == current_user.id)
+        .filter(
+            GroupMember.group_id == expense.group_id,
+            GroupMember.user_id == current_user.id,
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
         .first()
         is not None
     )
