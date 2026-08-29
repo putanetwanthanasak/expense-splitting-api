@@ -2,7 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
-import { HomePage } from './pages/HomePage'
+import { AddExpensePage } from './pages/AddExpensePage'
+import { GroupDetailPage } from './pages/GroupDetailPage'
+import { GroupListPage } from './pages/GroupListPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 
@@ -17,7 +19,23 @@ export default function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <HomePage />
+                <GroupListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/groups/:groupId"
+            element={
+              <ProtectedRoute>
+                <GroupDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/groups/:groupId/expenses/new"
+            element={
+              <ProtectedRoute>
+                <AddExpensePage />
               </ProtectedRoute>
             }
           />
