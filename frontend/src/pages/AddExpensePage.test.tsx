@@ -1,0 +1,163 @@
+/**
+ * AddExpensePage — the split-type-driven form and the live preview (§14.1, §14.2).
+ *
+ * The load-bearing checks:
+ *  - EQUAL preview shows the largest-remainder split (100/3 -> 33.34/33.33/33.33)
+ *    and names who gets the extra cent, matching split.ts / the backend (§6).
+ *  - EXACT keeps "Save expense" disabled until the per-person amounts add up to
+ *    the expense amount (§14.1).
+ *  - a submitted EQUAL expense posts the discriminated body the backend expects
+ *    and returns to the group.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+
+import { AddExpensePage } from './AddExpensePage'
+
+const members = [
+  { user_id: 'u1', email: 'alice@x.com', name: 'Alice', joined_at: '2026-01-01T00:00:00Z' },
+  { user_id: 'u2', email: 'bob@x.com', name: 'Bob', joined_at: '2026-01-01T00:00:00Z' },
+  { user_id: 'u3', email: 'carol@x.com', name: 'Carol', joined_at: '2026-01-01T00:00:00Z' },
+]
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+interface Call {
+  url: string
+  method: string
+  body: string | null
+}
+
+function stubFetch(calls: Call[]) {
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    const method = init?.method ?? 'GET'
+    calls.push({ url, method, body: typeof init?.body === 'string' ? init.body : null })
+
+    if (method === 'GET' && url.endsWith('/api/groups/g1')) {
+      return Promise.resolve(
+        jsonResponse(200, {
+          id: 'g1',
+          name: 'Trip',
+          created_by_user_id: 'u1',
+          created_at: '2026-01-01T00:00:00Z',
+          members,
+        }),
+      )
+    }
+    if (method === 'POST' && url.endsWith('/api/groups/g1/expenses')) {
+      return Promise.resolve(
+        jsonResponse(201, {
+          id: 'e1',
+          group_id: 'g1',
+          paid_by_user_id: 'u1',
+          amount: '100.00',
+          description: 'Dinner',
+          expense_date: '2026-08-29',
+          split_type: 'EQUAL',
+          created_at: '2026-08-29T00:00:00Z',
+          splits: [],
+        }),
+      )
+    }
+    return Promise.resolve(jsonResponse(404, { detail: `unexpected ${method} ${url}` }))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+}
+
+function renderPage() {
+  return render(
+    <MemoryRouter initialEntries={['/groups/g1/expenses/new']}>
+      <Routes>
+        <Route path="/groups/:groupId/expenses/new" element={<AddExpensePage />} />
+        <Route path="/groups/:groupId" element={<div>Group g1 detail</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
+describe('AddExpensePage', () => {
+  let calls: Call[]
+
+  beforeEach(() => {
+    calls = []
+    stubFetch(calls)
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('previews the EQUAL split and marks who receives the extra cent', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Add expense' })
+    await user.type(screen.getByLabelText('Description'), 'Dinner')
+    await user.type(screen.getByLabelText('Amount'), '100')
+
+    const preview = screen.getByRole('heading', { name: 'Preview' }).closest('.preview')
+    expect(preview).not.toBeNull()
+    expect(preview).toHaveTextContent('Alice: ฿33.34')
+    expect(preview).toHaveTextContent('(+฿0.01 remainder)')
+    expect(preview).toHaveTextContent('Bob: ฿33.33')
+    expect(preview).toHaveTextContent('Carol: ฿33.33')
+
+    expect(screen.getByRole('button', { name: /save expense/i })).toBeEnabled()
+  })
+
+  it('EXACT: keeps Save disabled until the per-person amounts equal the total', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Add expense' })
+    await user.type(screen.getByLabelText('Description'), 'Lunch')
+    await user.type(screen.getByLabelText('Amount'), '100')
+    await user.selectOptions(screen.getByLabelText('Split type'), 'EXACT')
+
+    await user.type(screen.getByLabelText('amount for Alice'), '40')
+    await user.type(screen.getByLabelText('amount for Bob'), '30')
+    await user.type(screen.getByLabelText('amount for Carol'), '30')
+
+    expect(screen.getByText(/Running total:/)).toHaveTextContent('฿100.00 of ฿100.00')
+    expect(screen.getByRole('button', { name: /save expense/i })).toBeEnabled()
+
+    await user.clear(screen.getByLabelText('amount for Carol'))
+    await user.type(screen.getByLabelText('amount for Carol'), '20')
+
+    expect(screen.getByText(/Running total:/)).toHaveTextContent('฿90.00 of ฿100.00')
+    expect(screen.getByRole('button', { name: /save expense/i })).toBeDisabled()
+  })
+
+  it('submits the EQUAL discriminated body and returns to the group', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Add expense' })
+    await user.type(screen.getByLabelText('Description'), 'Dinner')
+    await user.type(screen.getByLabelText('Amount'), '100')
+    await user.click(screen.getByRole('button', { name: /save expense/i }))
+
+    expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
+
+    const post = calls.find((c) => c.method === 'POST')
+    expect(post).toBeTruthy()
+    expect(JSON.parse(post!.body as string)).toMatchObject({
+      split_type: 'EQUAL',
+      amount: '100.00',
+      description: 'Dinner',
+      paid_by_user_id: 'u1',
+      participant_user_ids: ['u1', 'u2', 'u3'],
+    })
+  })
+})

@@ -144,3 +144,122 @@ export const authApi = {
 
   me: (): Promise<User> => apiFetch<User>('/api/users/me'),
 }
+
+// --- Groups --------------------------------------------------------------
+
+export interface Group {
+  id: string
+  name: string
+  created_by_user_id: string
+  created_at: string
+}
+
+export interface GroupMember {
+  user_id: string
+  email: string
+  name: string
+  joined_at: string
+}
+
+export interface GroupDetail extends Group {
+  members: GroupMember[]
+}
+
+/**
+ * One member's net position in a group. `net_balance` is a backend `Decimal`,
+ * so it arrives as a string ("150.00", "-40.00") — parse it with
+ * `parseMoney` before doing anything with it (SPEC §10.1). Positive = others
+ * owe this member; negative = this member owes.
+ */
+export interface BalanceEntry {
+  user_id: string
+  net_balance: string
+}
+
+export interface GroupBalances {
+  balances: BalanceEntry[]
+}
+
+export const groupsApi = {
+  list: (): Promise<Group[]> => apiFetch<Group[]>('/api/groups'),
+
+  get: (groupId: string): Promise<GroupDetail> =>
+    apiFetch<GroupDetail>(`/api/groups/${groupId}`),
+
+  create: (name: string): Promise<Group> =>
+    apiFetch<Group>('/api/groups', { method: 'POST', body: { name } }),
+
+  balances: (groupId: string): Promise<GroupBalances> =>
+    apiFetch<GroupBalances>(`/api/groups/${groupId}/balances`),
+}
+
+// --- Expenses ----------------------------------------------------------
+
+export type SplitType = 'EQUAL' | 'EXACT' | 'PERCENTAGE' | 'SHARES'
+
+export interface Expense {
+  id: string
+  group_id: string
+  paid_by_user_id: string
+  amount: string
+  description: string
+  expense_date: string
+  split_type: SplitType
+  created_at: string
+}
+
+export interface ExpensePage {
+  items: Expense[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ExpenseSplit {
+  user_id: string
+  amount_owed: string
+}
+
+export interface ExpenseDetail extends Expense {
+  splits: ExpenseSplit[]
+}
+
+interface ExpenseWriteCommon {
+  amount: string
+  description: string
+  expense_date: string
+  paid_by_user_id: string
+}
+
+/**
+ * Discriminated on `split_type`, matching the backend's discriminated-union
+ * request body (`app/schemas/expense.py`): EQUAL carries a plain participant
+ * list, the other three carry a per-participant value. Money / percentage /
+ * share values are all sent as strings — the shape the backend's `Decimal`
+ * fields expect.
+ */
+export type ExpenseCreateBody =
+  | (ExpenseWriteCommon & { split_type: 'EQUAL'; participant_user_ids: string[] })
+  | (ExpenseWriteCommon & {
+      split_type: 'EXACT'
+      splits: { user_id: string; amount: string }[]
+    })
+  | (ExpenseWriteCommon & {
+      split_type: 'PERCENTAGE'
+      splits: { user_id: string; percentage: string }[]
+    })
+  | (ExpenseWriteCommon & {
+      split_type: 'SHARES'
+      splits: { user_id: string; shares: string }[]
+    })
+
+export const expensesApi = {
+  list: (groupId: string): Promise<ExpensePage> =>
+    apiFetch<ExpensePage>(`/api/groups/${groupId}/expenses`),
+
+  create: (groupId: string, body: ExpenseCreateBody): Promise<ExpenseDetail> =>
+    apiFetch<ExpenseDetail>(`/api/groups/${groupId}/expenses`, {
+      method: 'POST',
+      body,
+    }),
+}

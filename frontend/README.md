@@ -33,6 +33,28 @@ The backend serializes `Decimal` as a **string** (`"33.34"`, never `33.34`).
 - **`Number()` and `parseFloat()` must not appear anywhere else under `src/`** —
   CI greps for violations (SPEC §10.1, §14.3).
 
+## Split preview — `src/lib/split.ts`
+
+The add-expense form previews each participant's share **before** saving (§14.2).
+That preview must match the backend byte for byte, so `src/lib/split.ts` is a
+direct port of `app/services/splitting.py`'s largest remainder method (§6):
+floor every ideal share to the cent, then hand the leftover cents out one at a
+time in participant order (§8.8). `src/lib/split.test.ts` pins it to the same
+cases as `tests/test_split_calculation.py` — 100 across 3 → 33.34 / 33.33 /
+33.33, summing to exactly 100.00.
+
+`splitEqual` / `splitExact` / `splitByPercentage` / `splitByShares` each return
+the per-participant `Money` map plus `remainderRecipients` — the participants
+who got the odd `+฿0.01`, which the form marks explicitly.
+
+## Screens (SPEC §14)
+
+| Route | Screen |
+|---|---|
+| `/` | Group list — each group with the caller's net position (green = owed to you, red = you owe) |
+| `/groups/:groupId` | Group detail — members + expense list + "Add expense" |
+| `/groups/:groupId/expenses/new` | Add expense — the form reshapes per split type (§14.1) with a live preview (§14.2) |
+
 ## Auth (`src/lib/api.ts`)
 
 `apiFetch` attaches the JWT automatically and handles auth failures. **401 and
