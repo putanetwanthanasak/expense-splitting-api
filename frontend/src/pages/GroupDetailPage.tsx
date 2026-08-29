@@ -75,9 +75,23 @@ export function GroupDetailPage() {
         <>
           <header className="page-head">
             <h1>{group.name}</h1>
-            <Link className="button-link" to={`/groups/${group.id}/expenses/new`}>
-              Add expense
-            </Link>
+            <nav className="page-actions">
+              <Link className="button-link" to={`/groups/${group.id}/expenses/new`}>
+                Add expense
+              </Link>
+              <Link
+                className="button-link secondary"
+                to={`/groups/${group.id}/balances`}
+              >
+                Balances
+              </Link>
+              <Link
+                className="button-link secondary"
+                to={`/groups/${group.id}/settle`}
+              >
+                Settle up
+              </Link>
+            </nav>
           </header>
 
           <section>

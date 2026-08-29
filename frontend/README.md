@@ -47,13 +47,24 @@ cases as `tests/test_split_calculation.py` — 100 across 3 → 33.34 / 33.33 /
 the per-participant `Money` map plus `remainderRecipients` — the participants
 who got the odd `+฿0.01`, which the form marks explicitly.
 
+## Balances in human terms — `src/lib/balance-summary.ts`
+
+`describeViewerBalance()` turns the viewer's net (`/balances`) plus the
+simplified transfers (`/settle-up`) into the readable Thai of SPEC §14.4 —
+a headline (`คุณควรได้รับคืน ฿250.00`) and one line per counterparty. Pure
+module, unit-tested in `balance-summary.test.ts`. The Settle-up screen shows the
+backend's `note` **verbatim** and adds a Thai gloss that the list *reduces* the
+number of transfers — never "minimum" / "optimal" (§5, CLAUDE.md).
+
 ## Screens (SPEC §14)
 
 | Route | Screen |
 |---|---|
 | `/` | Group list — each group with the caller's net position (green = owed to you, red = you owe) |
-| `/groups/:groupId` | Group detail — members + expense list + "Add expense" |
+| `/groups/:groupId` | Group detail — members + expense list + Add expense / Balances / Settle up |
 | `/groups/:groupId/expenses/new` | Add expense — the form reshapes per split type (§14.1) with a live preview (§14.2) |
+| `/groups/:groupId/balances` | Balance summary — readable Thai, per-person tree, settled empty state (§14.4) |
+| `/groups/:groupId/settle` | Settle up — simplified transfers + "mark as paid", the `note`, and settlement history (§14.4) |
 
 ## Auth (`src/lib/api.ts`)
 

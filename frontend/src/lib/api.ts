@@ -263,3 +263,57 @@ export const expensesApi = {
       body,
     }),
 }
+
+// --- Settle up / settlements -----------------------------------------
+
+/** One suggested repayment from the simplified transfer list (§5). */
+export interface Transfer {
+  from_user_id: string
+  to_user_id: string
+  amount: string
+}
+
+export interface SettleUp {
+  transfers: Transfer[]
+  /**
+   * The backend's own words about what the transfer list is — a greedy
+   * reduction, NOT a proven minimum (§5). Show it to the user verbatim; never
+   * paraphrase it into a stronger claim.
+   */
+  note: string
+}
+
+export interface Settlement {
+  id: string
+  group_id: string
+  from_user_id: string
+  to_user_id: string
+  amount: string
+  settled_at: string
+}
+
+/** POST response: the created settlement plus a one-off `warning` (§9) — set
+ * when the payer paid more than they owed and flipped to a net creditor. */
+export interface SettlementRecord extends Settlement {
+  warning: string | null
+}
+
+export interface SettlementCreateBody {
+  from_user_id: string
+  to_user_id: string
+  amount: string
+}
+
+export const settlementsApi = {
+  settleUp: (groupId: string): Promise<SettleUp> =>
+    apiFetch<SettleUp>(`/api/groups/${groupId}/settle-up`),
+
+  list: (groupId: string): Promise<Settlement[]> =>
+    apiFetch<Settlement[]>(`/api/groups/${groupId}/settlements`),
+
+  create: (groupId: string, body: SettlementCreateBody): Promise<SettlementRecord> =>
+    apiFetch<SettlementRecord>(`/api/groups/${groupId}/settlements`, {
+      method: 'POST',
+      body,
+    }),
+}
