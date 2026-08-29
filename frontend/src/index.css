@@ -349,3 +349,126 @@ a {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* --- Phase 12: balance summary / settle up ----------------------------- */
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.button-link.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.balance-summary {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.balance-headline {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-tree {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-tree .tree-branch {
+  display: inline-block;
+  margin-right: 0.4rem;
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+}
+
+.member-balances {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.settle-note {
+  border-left: 3px solid var(--accent);
+  padding: 0.25rem 0 0.25rem 0.75rem;
+}
+
+.settle-note p {
+  margin: 0.15rem 0;
+  font-size: 0.9rem;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--accent);
+  font-size: 0.9rem;
+}
+
+.transfer-list,
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transfer-row,
+.history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.transfer-row button {
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.transfer-row button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 0.5rem;
+  padding: 1.5rem 1rem;
+}
+
+.empty-state-emoji {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+}
