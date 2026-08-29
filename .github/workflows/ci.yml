@@ -80,3 +80,81 @@ jobs:
       # 8. pytest
       - name: Test (pytest)
         run: uv run pytest -v
+
+  # ---------------------------------------------------------------------------
+  # Frontend (frontend/). Independent of the backend job — no database needed.
+  # ---------------------------------------------------------------------------
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      # oxlint does not type-check, and `vite build` does not fail on type
+      # errors by default. This is the frontend's equivalent of the backend's
+      # mypy step — without it, a ReferenceError-shaped bug passes CI silently.
+      - name: Type-check (tsc)
+        run: npm run typecheck
+
+      - name: Test (vitest)
+        run: npm test
+
+      # §14.2 / §10.1: money math lives only in src/lib/money.ts. A bare
+      # Number(...) or parseFloat(...) anywhere else under src/ reintroduces
+      # binary float and the lost-cent bugs §6 exists to prevent.
+      - name: Enforce the money-helper boundary
+        run: |
+          hits=$(grep -rnE '\b(Number|parseFloat)[[:space:]]*\(' src \
+                   --include='*.ts' --include='*.tsx' \
+                   | grep -v 'src/lib/money.ts' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Number()/parseFloat() outside src/lib/money.ts:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK — no raw Number()/parseFloat() outside src/lib/money.ts"
+
+      - name: Build
+        run: npm run build
+
+      # §10.8: a green build does not mean a working app. A build missing an
+      # env var once tree-shook an entire app away and still exited 0. Assert
+      # on real signals: dist/ size, and that index.html loads a real bundle.
+      - name: Assert the build produced a real app
+        run: |
+          test -f dist/index.html
+          if ! grep -qE '<script[^>]+type="module"[^>]+src="/assets/[^"]+\.js"' dist/index.html; then
+            echo "::error::dist/index.html does not reference a bundled JS module"
+            exit 1
+          fi
+          size_kb=$(du -sk dist | cut -f1)
+          echo "dist/ is ${size_kb} KB"
+          # A real build of this app is ~250 KB; a tree-shook-to-nothing one is
+          # single-digit KB. 150 KB is a floor with headroom, not a target.
+          if [ "$size_kb" -lt 150 ]; then
+            echo "::error::dist/ is only ${size_kb} KB — the app likely tree-shook away"
+            exit 1
+          fi
+          js_kb=$(du -sk dist/assets/*.js | cut -f1 | sort -nr | head -1)
+          echo "largest JS chunk is ${js_kb} KB"
+          if [ "$js_kb" -lt 100 ]; then
+            echo "::error::largest JS chunk is only ${js_kb} KB — bundle looks empty"
+            exit 1
+          fi
