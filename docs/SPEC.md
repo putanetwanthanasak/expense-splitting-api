@@ -326,15 +326,23 @@ rejected with 400, never silently adjusted.
 POST   /api/auth/register       register (no roles; every user is equal)
 POST   /api/auth/login          returns a JWT
 GET    /api/users/me            current user
+GET    /api/users/lookup?email= resolve an email to {id, email, name}; 404 if none (auth required)
 ```
 
 ### Groups
 ```
-POST   /api/groups                       create (creator joins automatically)
-GET    /api/groups                       groups the caller belongs to
-GET    /api/groups/{id}                  details + members
-POST   /api/groups/{id}/members          add a member (caller must be a member)
-DELETE /api/groups/{id}/members/{uid}    remove a member
+POST   /api/groups                             create (creator joins as ACTIVE)
+GET    /api/groups                              groups the caller is an ACTIVE member of
+GET    /api/groups/{id}                         details + ACTIVE members
+POST   /api/groups/{id}/members                 invite a member — creates a PENDING row (§7.1)
+DELETE /api/groups/{id}/members/{uid}           remove a member / revoke a pending invitation
+POST   /api/groups/{id}/members/me/accept       accept your own invitation (PENDING -> ACTIVE)
+POST   /api/groups/{id}/members/me/decline      decline your own invitation (deletes the row)
+```
+
+### Me
+```
+GET    /api/me/invitations      your own PENDING invitations: {group_id, group_name, invited_at}
 ```
 
 ### Expenses
@@ -389,6 +397,41 @@ Response for `/settle-up`:
   "note": "Simplified using greedy matching; guarantees at most N-1 transfers, not a proven minimum."
 }
 ```
+
+### 7.1 Group membership requires acceptance
+
+A `group_members` row has a **status**: `PENDING` or `ACTIVE`.
+
+- `POST /api/groups/{id}/members` creates a **PENDING** row — an invitation, not
+  a membership. It still takes a `user_id` in the body (resolve an email to one
+  with `GET /api/users/lookup`). A nonexistent `user_id` is a 400; a user already
+  present in **any** status is a 409.
+- The invitee sees their PENDING invitations at `GET /api/me/invitations` and
+  acts on their **own** row only:
+  - `POST /api/groups/{id}/members/me/accept` — flips it to ACTIVE. 404 if the
+    caller has no PENDING row in that group (never invited, already ACTIVE, or
+    already declined/removed).
+  - `POST /api/groups/{id}/members/me/decline` — deletes it. Same 404 rule.
+- When a group is created, the creator's row is **ACTIVE** from the start, never
+  PENDING.
+
+Only **ACTIVE** members count as members anywhere it matters:
+
+- **Group-scoped authorization (§8.5):** a PENDING member gets **403** on every
+  group-scoped endpoint — identical to a stranger, preserving group-id
+  enumeration resistance. `accept`/`decline` are their only permitted actions.
+- **Balances (§4) and settle-up (§5):** never include a PENDING member. A
+  settlement naming one is a 400.
+- **Expense participants and payer (§8.6):** a PENDING member's id is "not a
+  member of this group" — a 400, same as any outsider.
+- `GET /api/groups` lists only groups where the caller is ACTIVE; a
+  PENDING-only group appears in `GET /api/me/invitations` instead.
+- `DELETE /api/groups/{id}/members/{uid}` doubles as "revoke a pending
+  invitation": removing a PENDING row always succeeds (its net balance is
+  trivially 0). Removing an ACTIVE member is unchanged — 409 if their net ≠ 0.
+
+Pre-existing rows (before this feature) are backfilled to ACTIVE: they were
+implicitly accepted memberships.
 
 ---
 
@@ -466,6 +509,20 @@ Each needs a test.
 - **The last member leaving is allowed; the group may be empty. The group is never
   auto-deleted** — deleting it would destroy expense history, contradicting the
   rule above.
+
+### Group membership — acceptance (§7.1)
+- Inviting a user (`POST .../members`) creates a **PENDING** row; they are not a
+  member until they accept. Re-inviting a PENDING (or ACTIVE) user → 409.
+- A PENDING member on any group-scoped endpoint → **403**, identical to a
+  non-member. Their only valid actions are accept/decline.
+- `accept` / `decline` with no PENDING row for that caller in that group → 404.
+  A caller can only accept or decline their **own** invitation.
+- A PENDING member's id as an expense payer/participant, or named in a
+  settlement → 400 ("not a member of this group").
+- `/balances` and `/settle-up` never include a PENDING member.
+- `DELETE .../members/{uid}` on a PENDING row always succeeds (net is trivially
+  0). On an ACTIVE member it is unchanged (409 if net ≠ 0).
+- `GET /api/groups` excludes a group where the caller is only PENDING.
 
 ### Settlements
 - Paying more than owed → allowed (the payer becomes a creditor), but return a

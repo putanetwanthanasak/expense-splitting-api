@@ -38,3 +38,15 @@ class GroupDetail(GroupOut):
 
 class AddMemberRequest(BaseModel):
     user_id: uuid.UUID
+
+
+class InvitationOut(BaseModel):
+    """GET /api/me/invitations — one of the caller's own PENDING memberships
+    (§7.1): which group it's for and when they were invited. `invited_at` is
+    the `group_members.joined_at` column, which for a PENDING row records the
+    invitation, not a join.
+    """
+
+    group_id: uuid.UUID
+    group_name: str
+    invited_at: datetime

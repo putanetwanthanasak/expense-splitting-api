@@ -14,7 +14,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models.enums import SplitType
+from app.models.enums import MembershipStatus, SplitType
 from app.models.expense import Expense
 from app.models.expense_split import ExpenseSplit
 from app.models.group_member import GroupMember
@@ -50,9 +50,18 @@ class ExpenseNotFoundError(Exception):
 
 
 def _group_member_ids(db: Session, group_id: uuid.UUID) -> set[uuid.UUID]:
+    """ACTIVE members only (§7.1): a PENDING invitee is not a member, so their
+    id as a payer or participant is the same 400 "not a member of this group"
+    as any stranger's id (§8.6).
+    """
     return {
         row[0]
-        for row in db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).all()
+        for row in db.query(GroupMember.user_id)
+        .filter(
+            GroupMember.group_id == group_id,
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
+        .all()
     }
 
 

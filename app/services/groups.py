@@ -11,6 +11,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.enums import MembershipStatus
 from app.models.group import Group
 from app.models.group_member import GroupMember
 from app.models.user import User
@@ -24,11 +25,22 @@ class UserNotFoundError(Exception):
 
 
 class AlreadyMemberError(Exception):
-    """Raised when adding a user who is already a member of the group."""
+    """Raised when adding a user who is already a member of the group -- in ANY
+    status. Re-inviting a PENDING invitee, or a user who is already ACTIVE, are
+    both 409 (§7.1); the `UNIQUE (group_id, user_id)` constraint doesn't care
+    about status, and neither do we.
+    """
 
 
 class MemberNotFoundError(Exception):
     """Raised when removing a user who is not currently a member of the group."""
+
+
+class NoPendingInvitationError(Exception):
+    """404: the caller has no PENDING group_members row in this group -- they
+    were never invited, already accepted (now ACTIVE), or already
+    declined/were removed (§7.1). accept and decline both raise this.
+    """
 
 
 class MemberHasOutstandingBalanceError(Exception):
@@ -52,7 +64,13 @@ def create_group(db: Session, *, name: str, creator_id: uuid.UUID) -> Group:
     group = Group(name=name, created_by_user_id=creator_id)
     db.add(group)
     db.flush()  # assign group.id before the membership row references it
-    db.add(GroupMember(group_id=group.id, user_id=creator_id))
+    # The creator's own row is ACTIVE from the start -- never PENDING (§7.1):
+    # nobody invites you to a group you just created.
+    db.add(
+        GroupMember(
+            group_id=group.id, user_id=creator_id, status=MembershipStatus.ACTIVE
+        )
+    )
     db.commit()
     db.refresh(group)
     return group
@@ -60,6 +78,10 @@ def create_group(db: Session, *, name: str, creator_id: uuid.UUID) -> Group:
 
 def add_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> GroupMember:
     """Add user_id to group_id.
+
+    The new row is PENDING (§7.1): being added to a group is an invitation, not
+    a membership. The invitee must accept it (`accept_invitation`) before they
+    count as a member for anything.
 
     Raises UserNotFoundError if no such user exists, AlreadyMemberError on a
     duplicate. The duplicate check relies on the `UNIQUE (group_id, user_id)`
@@ -69,7 +91,9 @@ def add_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> Group
     if db.get(User, user_id) is None:
         raise UserNotFoundError
 
-    member = GroupMember(group_id=group_id, user_id=user_id)
+    member = GroupMember(
+        group_id=group_id, user_id=user_id, status=MembershipStatus.PENDING
+    )
     db.add(member)
     try:
         db.commit()
@@ -78,6 +102,76 @@ def add_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> Group
         raise AlreadyMemberError from exc
     db.refresh(member)
     return member
+
+
+def _pending_membership(
+    db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID
+) -> GroupMember | None:
+    return (
+        db.query(GroupMember)
+        .filter(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id,
+            GroupMember.status == MembershipStatus.PENDING,
+        )
+        .first()
+    )
+
+
+def accept_invitation(
+    db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID
+) -> tuple[GroupMember, User]:
+    """Flip the caller's own PENDING row in `group_id` to ACTIVE (§7.1).
+
+    Raises NoPendingInvitationError (-> 404) if there is no PENDING row for this
+    user in this group: never invited, already ACTIVE, or already
+    declined/removed are deliberately indistinguishable, same reasoning as
+    §8.5's 403-not-404 for group access.
+    """
+    member = _pending_membership(db, group_id=group_id, user_id=user_id)
+    if member is None:
+        raise NoPendingInvitationError
+
+    member.status = MembershipStatus.ACTIVE
+    db.commit()
+    db.refresh(member)
+
+    user = db.get(User, user_id)
+    assert user is not None  # a membership row can't reference a missing user
+    return member, user
+
+
+def decline_invitation(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    """Delete the caller's own PENDING row in `group_id` (§7.1). Same
+    NoPendingInvitationError (-> 404) rule as `accept_invitation`.
+    """
+    member = _pending_membership(db, group_id=group_id, user_id=user_id)
+    if member is None:
+        raise NoPendingInvitationError
+
+    db.delete(member)
+    db.commit()
+
+
+def list_pending_invitations(
+    db: Session, *, user_id: uuid.UUID
+) -> list[tuple[GroupMember, Group]]:
+    """Every PENDING membership this user holds, across all groups, oldest
+    invitation first (§7: GET /api/me/invitations).
+    """
+    rows = (
+        db.query(GroupMember, Group)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            GroupMember.user_id == user_id,
+            GroupMember.status == MembershipStatus.PENDING,
+        )
+        .order_by(GroupMember.joined_at, GroupMember.id)
+        .all()
+    )
+    # Unpack each Row into a plain tuple (same pattern as groups router's
+    # get_group); avoids depending on Row's (underscored) tuple accessor.
+    return [(member, group) for member, group in rows]
 
 
 def remove_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -102,6 +196,12 @@ def remove_member(db: Session, *, group_id: uuid.UUID, user_id: uuid.UUID) -> No
     Removing the last member is allowed: the group becomes empty but is never
     auto-deleted (see CLAUDE.md "Removing the last member never deletes the
     group") — deleting it would destroy expense history.
+
+    This same path revokes a PENDING invitation (§7.1): a pending invitee has
+    never been in an expense, so `compute_group_net_balances` (ACTIVE members
+    only) doesn't list them and `.get(user_id, ZERO)` is ZERO — the
+    non-zero-balance guard below can never block removing them. Removing an
+    ACTIVE member is unchanged: still 409 if their net isn't 0.
     """
     member = (
         db.query(GroupMember)

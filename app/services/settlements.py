@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.models.enums import MembershipStatus
 from app.models.group_member import GroupMember
 from app.models.settlement import Settlement
 from app.services.balances import compute_group_net_balances
@@ -60,7 +61,17 @@ def record_settlement(
 
     member_ids = {
         row[0]
-        for row in db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).all()
+        for row in db.query(GroupMember.user_id)
+        .filter(
+            GroupMember.group_id == group_id,
+            # ACTIVE only (§7.1): a settlement naming a PENDING invitee is the
+            # same 400 as "paying someone outside the group" (§9). It would also
+            # break §8.1 -- compute_group_net_balances ignores PENDING users, so
+            # a settlement row touching one would leave the ACTIVE balances not
+            # summing to zero.
+            GroupMember.status == MembershipStatus.ACTIVE,
+        )
+        .all()
     }
     if from_user_id not in member_ids or to_user_id not in member_ids:
         raise SettlementValidationError(

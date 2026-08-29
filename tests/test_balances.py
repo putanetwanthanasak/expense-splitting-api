@@ -48,25 +48,35 @@ def _create_group(client: TestClient, token: str, name: str = "Test Group") -> s
     return group_id
 
 
-def _add_member(client: TestClient, owner_token: str, group_id: str, user_id: str) -> None:
-    resp = client.post(
+def _add_member(
+    client: TestClient, owner_token: str, group_id: str, user_id: str, member_token: str
+) -> None:
+    """Invite user_id and have them accept, so they end up ACTIVE. Group
+    membership now requires acceptance (§7.1); these tests predate that and
+    assume adding someone makes them immediately usable in expenses/balances.
+    """
+    invite = client.post(
         f"/api/groups/{group_id}/members",
         json={"user_id": user_id},
         headers=_auth(owner_token),
     )
-    assert resp.status_code == 201, resp.text
+    assert invite.status_code == 201, invite.text
+    accept = client.post(
+        f"/api/groups/{group_id}/members/me/accept", headers=_auth(member_token)
+    )
+    assert accept.status_code == 200, accept.text
 
 
 def _three_member_group(client: TestClient) -> tuple[str, str, str, str, str]:
-    """A fresh group with 3 members. Returns (group_id, owner_token, alice_id,
-    bob_id, carol_id) -- alice is the owner/creator.
+    """A fresh group with 3 ACTIVE members. Returns (group_id, owner_token,
+    alice_id, bob_id, carol_id) -- alice is the owner/creator.
     """
     alice_id, alice_token = _new_user(client)
-    bob_id, _ = _new_user(client)
-    carol_id, _ = _new_user(client)
+    bob_id, bob_token = _new_user(client)
+    carol_id, carol_token = _new_user(client)
     group_id = _create_group(client, alice_token)
-    _add_member(client, alice_token, group_id, bob_id)
-    _add_member(client, alice_token, group_id, carol_id)
+    _add_member(client, alice_token, group_id, bob_id, bob_token)
+    _add_member(client, alice_token, group_id, carol_id, carol_token)
     return group_id, alice_token, alice_id, bob_id, carol_id
 
 
@@ -149,7 +159,7 @@ def test_100_across_3_leaves_a_one_cent_asymmetry_but_group_still_sums_to_zero(
     # rounding asymmetry between the three of them without alice's own payment
     # muddying her balance.
     dave_id, dave_token = _new_user(client)
-    _add_member(client, token, group_id, dave_id)
+    _add_member(client, token, group_id, dave_id, dave_token)
 
     _create_expense(
         client,

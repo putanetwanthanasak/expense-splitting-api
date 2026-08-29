@@ -12,6 +12,7 @@ from decimal import Decimal
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.enums import MembershipStatus
 from app.models.expense import Expense
 from app.models.expense_split import ExpenseSplit
 from app.models.group_member import GroupMember
@@ -23,15 +24,20 @@ ZERO = Decimal("0.00")
 def compute_group_net_balances(db: Session, group_id: uuid.UUID) -> dict[uuid.UUID, Decimal]:
     """net(u) = paid − owed + settlements_paid − settlements_received.
 
-    Returns one entry per *current* member of the group (§7: GET /groups/{id}/balances
-    is per-member). A member removed earlier must have already had net == 0 (§9,
-    edge case "Removing a member whose net balance != 0 -> 409"), so omitting their
-    historical rows here does not change the total — the sum-to-zero invariant
-    (§8.1) still holds.
+    Returns one entry per *ACTIVE* member of the group (§7: GET /groups/{id}/balances
+    is per-member; §7.1: a PENDING invitee is not a member and never appears in
+    /balances or /settle-up). A member removed earlier must have already had
+    net == 0 (§9, edge case "Removing a member whose net balance != 0 -> 409"),
+    and a PENDING member has no expenses or settlements at all, so omitting
+    either kind of row here does not change the total — the sum-to-zero
+    invariant (§8.1) still holds.
     """
     member_ids = [
         row[0]
-        for row in db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).all()
+        for row in db.query(GroupMember.user_id).filter(
+            GroupMember.group_id == group_id,
+            GroupMember.status == MembershipStatus.ACTIVE,
+        ).all()
     ]
     balances: dict[uuid.UUID, Decimal] = dict.fromkeys(member_ids, ZERO)
     if not member_ids:
