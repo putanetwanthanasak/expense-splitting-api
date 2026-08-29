@@ -41,6 +41,10 @@ describe('parseMoney', () => {
 })
 
 describe('formatMoney', () => {
+  // These call formatMoney and assert its *string* output. A body that
+  // referenced an undefined local (or otherwise threw) would fail here rather
+  // than ship silently — oxlint does not type-check and `vite build` would not
+  // catch it.
   it('renders two decimals with the currency prefix', () => {
     expect(formatMoney(m(3334))).toBe('฿33.34')
     expect(formatMoney(m(10000))).toBe('฿100.00')
@@ -49,8 +53,15 @@ describe('formatMoney', () => {
   })
 
   it('renders negatives with a leading minus', () => {
+    expect(formatMoney(m(-500))).toBe('-฿5.00')
     expect(formatMoney(m(-10000))).toBe('-฿100.00')
     expect(formatMoney(m(-1))).toBe('-฿0.01')
+  })
+
+  it('does not throw for any representative amount', () => {
+    for (const cents of [0, 1, 5, 99, 100, 3334, -1, -500, -12345]) {
+      expect(() => formatMoney(m(cents))).not.toThrow()
+    }
   })
 })
 

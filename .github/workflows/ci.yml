@@ -107,6 +107,12 @@ jobs:
       - name: Lint (oxlint)
         run: npm run lint
 
+      # oxlint does not type-check, and `vite build` does not fail on type
+      # errors by default. This is the frontend's equivalent of the backend's
+      # mypy step — without it, a ReferenceError-shaped bug passes CI silently.
+      - name: Type-check (tsc)
+        run: npm run typecheck
+
       - name: Test (vitest)
         run: npm test
 
