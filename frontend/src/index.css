@@ -8,7 +8,12 @@
   --pos: #15803d;
   --neg: #b91c1c;
 
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Global base: IBM Plex Sans Thai (loaded in index.html) and the larger base
+     size, both from tokens.css so a single token change restyles mobile too —
+     not just the desktop @media block. Every rem-based size below scales with
+     this. */
+  font-family: var(--ds-font-thai);
+  font-size: var(--ds-size-base);
   line-height: 1.5;
   color: var(--fg);
   background: var(--bg);
@@ -223,6 +228,13 @@ a {
 
 .expense-desc {
   font-weight: 600;
+}
+
+/* The expense amount on its own line (Phase 19 polish). Mobile baseline here;
+   styles/desktop.css tunes size/family behind the 1024px breakpoint. */
+.expense-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .expense-meta {
