@@ -24,9 +24,23 @@ import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ApiError, expensesApi, groupsApi, usersApi } from '../lib/api'
-import type { Expense, GroupDetail, GroupMember, UserLookupOut } from '../lib/api'
+import type {
+  Expense,
+  GroupDetail,
+  GroupMember,
+  SplitType,
+  UserLookupOut,
+} from '../lib/api'
 import { formatMoney, negateMoney, parseMoney } from '../lib/money'
 import type { Money } from '../lib/money'
+
+/** Thai display labels for the split-type enum shown in an expense's meta line. */
+const SPLIT_TYPE_TH: Record<SplitType, string> = {
+  EQUAL: 'เท่ากัน',
+  EXACT: 'ระบุจำนวน',
+  PERCENTAGE: 'เปอร์เซ็นต์',
+  SHARES: 'สัดส่วน',
+}
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>()
@@ -75,9 +89,9 @@ export function GroupDetailPage() {
           setError(
             err instanceof ApiError
               ? err.status === 403
-                ? "You don't have access to this group."
+                ? 'คุณไม่มีสิทธิ์เข้าถึงกลุ่มนี้'
                 : err.detail
-              : 'Could not load this group.',
+              : 'โหลดข้อมูลกลุ่มไม่สำเร็จ',
           )
         }
       }
@@ -90,7 +104,7 @@ export function GroupDetailPage() {
   }, [groupId])
 
   const nameOf = (userId: string): string =>
-    group?.members.find((m) => m.user_id === userId)?.name ?? 'Unknown'
+    group?.members.find((m) => m.user_id === userId)?.name ?? 'ไม่ทราบชื่อ'
 
   async function onLookupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -106,9 +120,9 @@ export function GroupDetailPage() {
       setLookupResult(await usersApi.lookup(email))
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setLookupNotice('No account found with that email.')
+        setLookupNotice('ไม่พบบัญชีที่ใช้อีเมลนี้')
       } else {
-        setInviteError(err instanceof ApiError ? err.detail : 'Could not look up that email.')
+        setInviteError(err instanceof ApiError ? err.detail : 'ค้นหาอีเมลนี้ไม่สำเร็จ')
       }
     } finally {
       setLookingUp(false)
@@ -134,9 +148,9 @@ export function GroupDetailPage() {
       setLookupResult(null)
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setInviteNotice('Already invited or already a member of this group.')
+        setInviteNotice('ผู้ใช้นี้ถูกเชิญหรือเป็นสมาชิกของกลุ่มนี้อยู่แล้ว')
       } else {
-        setInviteError(err instanceof ApiError ? err.detail : 'Could not send the invite.')
+        setInviteError(err instanceof ApiError ? err.detail : 'ส่งคำเชิญไม่สำเร็จ')
       }
     } finally {
       setInviting(false)
@@ -171,13 +185,13 @@ export function GroupDetailPage() {
         const outstanding = extractOutstandingBalance(err.detail)
         setRemoveMemberNotice(
           outstanding !== null
-            ? `Cannot remove ${member.name} — they still have an outstanding balance of ` +
-                `${formatMoney(outstanding)}. Settle up first.`
-            : `Cannot remove ${member.name} — they still have an outstanding balance. Settle up first.`,
+            ? `นำ ${member.name} ออกไม่ได้ — ยังมียอดค้างชำระอยู่ ` +
+                `${formatMoney(outstanding)} กรุณาเคลียร์ยอดก่อน`
+            : `นำ ${member.name} ออกไม่ได้ — ยังมียอดค้างชำระอยู่ กรุณาเคลียร์ยอดก่อน`,
         )
       } else {
         setRemoveMemberError(
-          err instanceof ApiError ? err.detail : 'Could not remove this member.',
+          err instanceof ApiError ? err.detail : 'นำสมาชิกออกไม่สำเร็จ',
         )
       }
     } finally {
@@ -204,7 +218,7 @@ export function GroupDetailPage() {
       setDeletingExpenseId(null)
     } catch (err) {
       setDeleteExpenseError(
-        err instanceof ApiError ? err.detail : 'Could not delete this expense.',
+        err instanceof ApiError ? err.detail : 'ลบรายการนี้ไม่สำเร็จ',
       )
     } finally {
       setDeleteExpensePending(false)
@@ -212,9 +226,9 @@ export function GroupDetailPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page group-detail-page">
       <p>
-        <Link to="/">← All groups</Link>
+        <Link to="/">← กลุ่มทั้งหมด</Link>
       </p>
 
       {error !== null && (
@@ -223,7 +237,7 @@ export function GroupDetailPage() {
         </p>
       )}
 
-      {group === null && error === null && <p className="centered-status">Loading…</p>}
+      {group === null && error === null && <p className="centered-status">กำลังโหลด…</p>}
 
       {group !== null && (
         <>
@@ -231,41 +245,43 @@ export function GroupDetailPage() {
             <h1>{group.name}</h1>
             <nav className="page-actions">
               <Link className="button-link" to={`/groups/${group.id}/expenses/new`}>
-                Add expense
+                + เพิ่มค่าใช้จ่าย
               </Link>
               <Link
                 className="button-link secondary"
                 to={`/groups/${group.id}/balances`}
               >
-                Balances
+                ยอดคงเหลือ
               </Link>
               <Link
                 className="button-link secondary"
                 to={`/groups/${group.id}/settle`}
               >
-                Settle up
+                เคลียร์ยอด
               </Link>
             </nav>
           </header>
 
           <section>
-            <h2>Members</h2>
+            <h2>สมาชิก</h2>
             <ul className="member-list">
               {group.members.map((m) => (
                 <li key={m.user_id}>
                   <span>
                     {m.name} <span className="muted">({m.email})</span>
-                    {m.status === 'PENDING' && <span className="pending-tag">pending</span>}
+                    {m.status === 'PENDING' && (
+                      <span className="pending-tag">รอการยอมรับ</span>
+                    )}
                   </span>
                   {removingMemberId === m.user_id ? (
                     <span className="confirm-inline">
-                      Remove {m.name}?
+                      นำ {m.name} ออก?
                       <button
                         type="button"
                         onClick={() => confirmRemoveMember(m)}
                         disabled={removeMemberPending}
                       >
-                        {removeMemberPending ? 'Removing…' : 'Confirm'}
+                        {removeMemberPending ? 'กำลังนำออก…' : 'ยืนยัน'}
                       </button>
                       <button
                         type="button"
@@ -273,7 +289,7 @@ export function GroupDetailPage() {
                         onClick={cancelRemoveMember}
                         disabled={removeMemberPending}
                       >
-                        Cancel
+                        ยกเลิก
                       </button>
                     </span>
                   ) : (
@@ -282,7 +298,7 @@ export function GroupDetailPage() {
                       className="secondary"
                       onClick={() => startRemoveMember(m.user_id)}
                     >
-                      Remove
+                      นำออก
                     </button>
                   )}
                 </li>
@@ -299,14 +315,14 @@ export function GroupDetailPage() {
             <form className="inline-form invite-form" onSubmit={onLookupSubmit}>
               <input
                 type="email"
-                aria-label="Email to invite"
-                placeholder="Invite by email"
+                aria-label="อีเมลที่ต้องการเชิญ"
+                placeholder="เชิญสมาชิกด้วยอีเมล"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 required
               />
               <button type="submit" disabled={lookingUp || inviteEmail.trim() === ''}>
-                {lookingUp ? 'Looking up…' : 'Invite'}
+                {lookingUp ? 'กำลังค้นหา…' : '+ เชิญสมาชิก'}
               </button>
             </form>
 
@@ -321,11 +337,11 @@ export function GroupDetailPage() {
             {lookupResult !== null && (
               <div className="invite-confirm">
                 <p>
-                  Invite {lookupResult.name} ({lookupResult.email}) to this group?
+                  เชิญ {lookupResult.name} ({lookupResult.email}) เข้ากลุ่มนี้หรือไม่?
                 </p>
                 <div className="invite-confirm-actions">
                   <button type="button" onClick={confirmInvite} disabled={inviting}>
-                    {inviting ? 'Inviting…' : 'Confirm invite'}
+                    {inviting ? 'กำลังเชิญ…' : 'ยืนยันการเชิญ'}
                   </button>
                   <button
                     type="button"
@@ -333,7 +349,7 @@ export function GroupDetailPage() {
                     onClick={cancelInvite}
                     disabled={inviting}
                   >
-                    Cancel
+                    ยกเลิก
                   </button>
                 </div>
               </div>
@@ -341,10 +357,10 @@ export function GroupDetailPage() {
           </section>
 
           <section>
-            <h2>Expenses</h2>
+            <h2>รายการค่าใช้จ่าย</h2>
 
             {expenses !== null && expenses.length === 0 && (
-              <p className="centered-status">No expenses yet.</p>
+              <p className="centered-status">ยังไม่มีรายการค่าใช้จ่าย</p>
             )}
 
             {expenses !== null && expenses.length > 0 && (
@@ -353,25 +369,26 @@ export function GroupDetailPage() {
                   <li key={e.id}>
                     <span className="expense-desc">{e.description}</span>
                     <span className="expense-meta">
-                      {formatMoney(parseMoney(e.amount))} · paid by{' '}
-                      {nameOf(e.paid_by_user_id)} · {e.expense_date} · {e.split_type}
+                      {formatMoney(parseMoney(e.amount))} · {nameOf(e.paid_by_user_id)} จ่าย
+                      {' · '}
+                      {e.expense_date} · {SPLIT_TYPE_TH[e.split_type]}
                     </span>
                     <div className="expense-actions">
                       <Link
                         className="button-link secondary"
                         to={`/groups/${group.id}/expenses/${e.id}/edit`}
                       >
-                        Edit
+                        แก้ไข
                       </Link>
                       {deletingExpenseId === e.id ? (
                         <span className="confirm-inline">
-                          Delete this expense?
+                          ลบรายการนี้?
                           <button
                             type="button"
                             onClick={() => confirmDeleteExpense(e.id)}
                             disabled={deleteExpensePending}
                           >
-                            {deleteExpensePending ? 'Deleting…' : 'Confirm'}
+                            {deleteExpensePending ? 'กำลังลบ…' : 'ยืนยัน'}
                           </button>
                           <button
                             type="button"
@@ -379,7 +396,7 @@ export function GroupDetailPage() {
                             onClick={cancelDeleteExpense}
                             disabled={deleteExpensePending}
                           >
-                            Cancel
+                            ยกเลิก
                           </button>
                         </span>
                       ) : (
@@ -388,7 +405,7 @@ export function GroupDetailPage() {
                           className="secondary"
                           onClick={() => startDeleteExpense(e.id)}
                         >
-                          Delete
+                          ลบ
                         </button>
                       )}
                     </div>

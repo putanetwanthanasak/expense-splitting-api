@@ -42,11 +42,20 @@ const SPLIT_TYPES: SplitType[] = ['EQUAL', 'EXACT', 'PERCENTAGE', 'SHARES']
 const ONE_CENT = parseMoney('0.01')
 const TODAY = new Date().toISOString().slice(0, 10)
 
+/** Thai labels for the split-type <select> options (values stay the enum). */
+const SPLIT_TYPE_LABELS: Record<SplitType, string> = {
+  EQUAL: 'เท่ากัน',
+  EXACT: 'ระบุจำนวน',
+  PERCENTAGE: 'เปอร์เซ็นต์',
+  SHARES: 'สัดส่วน',
+}
+
+/** Per-participant input aria-label prefix, e.g. "จำนวนเงินของ Alice". */
 const valueLabel: Record<SplitType, string> = {
   EQUAL: '',
-  EXACT: 'amount',
-  PERCENTAGE: 'percent',
-  SHARES: 'shares',
+  EXACT: 'จำนวนเงินของ',
+  PERCENTAGE: 'เปอร์เซ็นต์ของ',
+  SHARES: 'สัดส่วนของ',
 }
 
 interface Preview {
@@ -129,11 +138,11 @@ export function AddExpensePage() {
       setLoadError(
         err instanceof ApiError
           ? err.status === 403
-            ? "You don't have access to this group."
+            ? 'คุณไม่มีสิทธิ์เข้าถึงกลุ่มนี้'
             : err.detail
           : expenseId
-            ? 'Could not load this expense.'
-            : 'Could not load this group.',
+            ? 'โหลดรายการนี้ไม่สำเร็จ'
+            : 'โหลดข้อมูลกลุ่มไม่สำเร็จ',
       )
     })
 
@@ -143,7 +152,7 @@ export function AddExpensePage() {
   }, [groupId, expenseId])
 
   const nameOf = (userId: string): string =>
-    members?.find((m) => m.user_id === userId)?.name ?? 'Unknown'
+    members?.find((m) => m.user_id === userId)?.name ?? 'ไม่ทราบชื่อ'
 
   const amount = useMemo<Money | null>(() => {
     try {
@@ -178,10 +187,14 @@ export function AddExpensePage() {
       const running = parsed === null ? null : sumMoney(parsed.map((p) => p.value))
       const runningTotal =
         running === null
-          ? `— of ${formatMoney(amount)}`
-          : `${formatMoney(running)} of ${formatMoney(amount)}`
+          ? `— จาก ${formatMoney(amount)}`
+          : `${formatMoney(running)} จาก ${formatMoney(amount)}`
       if (parsed === null) {
-        return { result: null, hint: 'Enter an amount for every ticked participant.', runningTotal }
+        return {
+          result: null,
+          hint: 'กรอกจำนวนเงินให้ครบทุกคนที่เลือกไว้',
+          runningTotal,
+        }
       }
       try {
         const result = splitExact(
@@ -201,9 +214,15 @@ export function AddExpensePage() {
           ? null
           : (parsed.reduce((s, p) => s + p.value, 0) as Percent)
       const runningTotal =
-        runningPct === null ? '—% of 100%' : `${toPercentApiString(runningPct)}% of 100%`
+        runningPct === null
+          ? '—% จาก 100%'
+          : `${toPercentApiString(runningPct)}% จาก 100%`
       if (parsed === null) {
-        return { result: null, hint: 'Enter a percentage for every ticked participant.', runningTotal }
+        return {
+          result: null,
+          hint: 'กรอกเปอร์เซ็นต์ให้ครบทุกคนที่เลือกไว้',
+          runningTotal,
+        }
       }
       try {
         const result = splitByPercentage(
@@ -221,7 +240,7 @@ export function AddExpensePage() {
     if (parsed === null) {
       return {
         result: null,
-        hint: 'Enter a whole share count for every ticked participant.',
+        hint: 'กรอกจำนวนส่วนแบบเต็มจำนวนให้ครบทุกคนที่เลือกไว้',
         runningTotal: null,
       }
     }
@@ -309,16 +328,16 @@ export function AddExpensePage() {
       }
       navigate(`/groups/${groupId}`, { replace: true })
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.detail : 'Could not save the expense.')
+      setSubmitError(err instanceof ApiError ? err.detail : 'บันทึกรายการไม่สำเร็จ')
       setSubmitting(false)
     }
   }
 
   if (loadError !== null) {
     return (
-      <main className="page">
+      <main className="page add-expense-page">
         <p>
-          <Link to={groupId ? `/groups/${groupId}` : '/'}>← Back</Link>
+          <Link to={groupId ? `/groups/${groupId}` : '/'}>← กลับ</Link>
         </p>
         <p role="alert" className="form-error">
           {loadError}
@@ -329,22 +348,22 @@ export function AddExpensePage() {
 
   if (members === null) {
     return (
-      <main className="page">
-        <p className="centered-status">Loading…</p>
+      <main className="page add-expense-page">
+        <p className="centered-status">กำลังโหลด…</p>
       </main>
     )
   }
 
   return (
-    <main className="page">
+    <main className="page add-expense-page">
       <p>
-        <Link to={`/groups/${groupId}`}>← Back to group</Link>
+        <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
-      <h1>{isEditing ? 'Edit expense' : 'Add expense'}</h1>
+      <h1>{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใช้จ่าย'}</h1>
 
       <form className="expense-form" onSubmit={onSubmit} noValidate>
         <label>
-          Description
+          รายละเอียด
           <input
             name="description"
             value={description}
@@ -354,7 +373,7 @@ export function AddExpensePage() {
         </label>
 
         <label>
-          Amount
+          จำนวนเงิน
           <input
             name="amount"
             inputMode="decimal"
@@ -365,11 +384,11 @@ export function AddExpensePage() {
           />
         </label>
         {amountText !== '' && amount === null && (
-          <p className="split-hint">Enter an amount like 42.50.</p>
+          <p className="split-hint">กรอกจำนวนเงิน เช่น 42.50</p>
         )}
 
         <label>
-          Date
+          วันที่
           <input
             type="date"
             name="expense_date"
@@ -380,7 +399,7 @@ export function AddExpensePage() {
         </label>
 
         <label>
-          Paid by
+          ผู้จ่าย
           <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id}>
@@ -391,21 +410,21 @@ export function AddExpensePage() {
         </label>
 
         <label>
-          Split type
+          วิธีแบ่ง
           <select
             value={splitType}
             onChange={(e) => changeSplitType(e.target.value as SplitType)}
           >
             {SPLIT_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {SPLIT_TYPE_LABELS[t]}
               </option>
             ))}
           </select>
         </label>
 
         <fieldset className="participants">
-          <legend>Participants</legend>
+          <legend>ผู้ร่วมจ่าย</legend>
           {members.map((m) => {
             const isSelected = selected[m.user_id] ?? false
             return (
@@ -422,7 +441,7 @@ export function AddExpensePage() {
                   <input
                     className="split-value"
                     inputMode={splitType === 'SHARES' ? 'numeric' : 'decimal'}
-                    aria-label={`${valueLabel[splitType]} for ${m.name}`}
+                    aria-label={`${valueLabel[splitType]} ${m.name}`}
                     value={values[m.user_id] ?? ''}
                     onChange={(e) =>
                       setValues((v) => ({ ...v, [m.user_id]: e.target.value }))
@@ -440,7 +459,7 @@ export function AddExpensePage() {
               preview.result === null ? 'running-total running-total-off' : 'running-total'
             }
           >
-            Running total: {preview.runningTotal}
+            ยอดรวมที่กรอก: {preview.runningTotal}
           </p>
         )}
 
@@ -448,7 +467,7 @@ export function AddExpensePage() {
 
         {preview.result !== null && (
           <div className="preview">
-            <h2>Preview</h2>
+            <h2>ตัวอย่างการแบ่ง</h2>
             <ul>
               {participantIds.map((id) => {
                 const share = preview.result?.shares.get(id) ?? ZERO
@@ -457,7 +476,7 @@ export function AddExpensePage() {
                   <li key={id}>
                     {nameOf(id)}: {formatMoney(share)}
                     {getsExtra && (
-                      <span className="remainder"> (+{formatMoney(ONE_CENT)} remainder)</span>
+                      <span className="remainder"> (+{formatMoney(ONE_CENT)} เศษสตางค์)</span>
                     )}
                   </li>
                 )
@@ -465,10 +484,9 @@ export function AddExpensePage() {
             </ul>
             {preview.result.remainderRecipients.length > 0 && (
               <p className="muted">
-                Odd cents from rounding go to the first{' '}
-                {preview.result.remainderRecipients.length} participant
-                {preview.result.remainderRecipients.length === 1 ? '' : 's'} — the same
-                rule the server applies (SPEC §6, §8.8).
+                เศษสตางค์จากการปัดเศษจะตกกับผู้ร่วมจ่าย{' '}
+                {preview.result.remainderRecipients.length} คนแรก —
+                เป็นกฎเดียวกับที่เซิร์ฟเวอร์ใช้ (SPEC §6, §8.8)
               </p>
             )}
           </div>
@@ -481,7 +499,7 @@ export function AddExpensePage() {
         )}
 
         <button type="submit" disabled={!canSubmit}>
-          {submitting ? 'Saving…' : isEditing ? 'Save changes' : 'Save expense'}
+          {submitting ? 'กำลังบันทึก…' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
         </button>
       </form>
     </main>
@@ -490,8 +508,39 @@ export function AddExpensePage() {
 
 // --- helpers ----------------------------------------------------------
 
+/**
+ * Turn an error thrown by split.ts into a Thai hint for the live preview.
+ *
+ * split.ts is a pure module with its own tests and is deliberately left
+ * untranslated, so its `Error.message`s are English. Map the shapes the
+ * preview can actually surface — an unbalanced EXACT or PERCENTAGE split, and
+ * a couple of guard failures — to Thai here, in the display layer only.
+ * Matching is on stable fragments, not whole sentences, and the exact figures
+ * already show in the red "ยอดรวมที่กรอก" line just above, so the wording here
+ * doesn't repeat them. Anything unrecognised falls through to the raw message
+ * (or a generic Thai line for a non-Error) so a future wording change in
+ * split.ts still shows something meaningful rather than a blank hint.
+ */
 function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : 'Invalid split'
+  if (!(err instanceof Error)) return 'การแบ่งไม่ถูกต้อง'
+  const msg = err.message
+
+  if (/sum to .* does not match the .* total/i.test(msg)) {
+    return 'ยอดที่ระบุของแต่ละคนรวมกันยังไม่ตรงกับยอดค่าใช้จ่าย'
+  }
+  if (/percentages sum to .* does not equal 100/i.test(msg)) {
+    return 'เปอร์เซ็นต์ของแต่ละคนรวมกันยังไม่เท่ากับ 100%'
+  }
+  if (/requires at least one participant/i.test(msg)) {
+    return 'ต้องเลือกผู้ร่วมจ่ายอย่างน้อยหนึ่งคน'
+  }
+  if (/must be unique/i.test(msg)) {
+    return 'ผู้ร่วมจ่ายต้องไม่ซ้ำกัน'
+  }
+  if (/must be a whole number/i.test(msg)) {
+    return 'จำนวนส่วนของแต่ละคนต้องเป็นจำนวนเต็มที่มากกว่า 0'
+  }
+  return msg
 }
 
 /**

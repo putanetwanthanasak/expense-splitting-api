@@ -11,7 +11,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -120,51 +120,71 @@ describe('AddExpensePage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByRole('heading', { name: 'Add expense' })
-    await user.type(screen.getByLabelText('Description'), 'Dinner')
-    await user.type(screen.getByLabelText('Amount'), '100')
+    await screen.findByRole('heading', { name: 'เพิ่มรายการใช้จ่าย' })
+    await user.type(screen.getByLabelText('รายละเอียด'), 'Dinner')
+    await user.type(screen.getByLabelText('จำนวนเงิน'), '100')
 
-    const preview = screen.getByRole('heading', { name: 'Preview' }).closest('.preview')
+    const preview = screen.getByRole('heading', { name: 'ตัวอย่างการแบ่ง' }).closest('.preview')
     expect(preview).not.toBeNull()
     expect(preview).toHaveTextContent('Alice: ฿33.34')
-    expect(preview).toHaveTextContent('(+฿0.01 remainder)')
+    expect(preview).toHaveTextContent('(+฿0.01 เศษสตางค์)')
     expect(preview).toHaveTextContent('Bob: ฿33.33')
     expect(preview).toHaveTextContent('Carol: ฿33.33')
 
-    expect(screen.getByRole('button', { name: /save expense/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
   })
 
   it('EXACT: keeps Save disabled until the per-person amounts equal the total', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByRole('heading', { name: 'Add expense' })
-    await user.type(screen.getByLabelText('Description'), 'Lunch')
-    await user.type(screen.getByLabelText('Amount'), '100')
-    await user.selectOptions(screen.getByLabelText('Split type'), 'EXACT')
+    await screen.findByRole('heading', { name: 'เพิ่มรายการใช้จ่าย' })
+    await user.type(screen.getByLabelText('รายละเอียด'), 'Lunch')
+    await user.type(screen.getByLabelText('จำนวนเงิน'), '100')
+    await user.selectOptions(screen.getByLabelText('วิธีแบ่ง'), 'EXACT')
 
-    await user.type(screen.getByLabelText('amount for Alice'), '40')
-    await user.type(screen.getByLabelText('amount for Bob'), '30')
-    await user.type(screen.getByLabelText('amount for Carol'), '30')
+    await user.type(screen.getByLabelText('จำนวนเงินของ Alice'), '40')
+    await user.type(screen.getByLabelText('จำนวนเงินของ Bob'), '30')
+    await user.type(screen.getByLabelText('จำนวนเงินของ Carol'), '30')
 
-    expect(screen.getByText(/Running total:/)).toHaveTextContent('฿100.00 of ฿100.00')
-    expect(screen.getByRole('button', { name: /save expense/i })).toBeEnabled()
+    expect(screen.getByText(/ยอดรวมที่กรอก:/)).toHaveTextContent('฿100.00 จาก ฿100.00')
+    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
 
-    await user.clear(screen.getByLabelText('amount for Carol'))
-    await user.type(screen.getByLabelText('amount for Carol'), '20')
+    await user.clear(screen.getByLabelText('จำนวนเงินของ Carol'))
+    await user.type(screen.getByLabelText('จำนวนเงินของ Carol'), '20')
 
-    expect(screen.getByText(/Running total:/)).toHaveTextContent('฿90.00 of ฿100.00')
-    expect(screen.getByRole('button', { name: /save expense/i })).toBeDisabled()
+    expect(screen.getByText(/ยอดรวมที่กรอก:/)).toHaveTextContent('฿90.00 จาก ฿100.00')
+    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeDisabled()
+
+    // The split.ts mismatch hint is shown in Thai, not the raw English message.
+    expect(
+      screen.getByText('ยอดที่ระบุของแต่ละคนรวมกันยังไม่ตรงกับยอดค่าใช้จ่าย'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/cents/)).not.toBeInTheDocument()
+  })
+
+  it('renders the split-type options with Thai labels (real DOM, not CSS)', async () => {
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'เพิ่มรายการใช้จ่าย' })
+    const select = screen.getByLabelText('วิธีแบ่ง')
+    // The <option> values stay the enum; only the visible text is Thai.
+    expect(within(select).getByRole('option', { name: 'เท่ากัน' })).toHaveValue('EQUAL')
+    expect(within(select).getByRole('option', { name: 'ระบุจำนวน' })).toHaveValue('EXACT')
+    expect(within(select).getByRole('option', { name: 'เปอร์เซ็นต์' })).toHaveValue(
+      'PERCENTAGE',
+    )
+    expect(within(select).getByRole('option', { name: 'สัดส่วน' })).toHaveValue('SHARES')
   })
 
   it('submits the EQUAL discriminated body and returns to the group', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByRole('heading', { name: 'Add expense' })
-    await user.type(screen.getByLabelText('Description'), 'Dinner')
-    await user.type(screen.getByLabelText('Amount'), '100')
-    await user.click(screen.getByRole('button', { name: /save expense/i }))
+    await screen.findByRole('heading', { name: 'เพิ่มรายการใช้จ่าย' })
+    await user.type(screen.getByLabelText('รายละเอียด'), 'Dinner')
+    await user.type(screen.getByLabelText('จำนวนเงิน'), '100')
+    await user.click(screen.getByRole('button', { name: 'บันทึกรายการ' }))
 
     expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
 
@@ -255,22 +275,22 @@ describe('AddExpensePage — edit mode', () => {
     const user = userEvent.setup()
     renderEditPage()
 
-    await screen.findByRole('heading', { name: 'Edit expense' })
+    await screen.findByRole('heading', { name: 'แก้ไขรายการ' })
 
-    expect(screen.getByLabelText('Description')).toHaveValue('Dinner')
-    expect(screen.getByLabelText('Amount')).toHaveValue('100.00')
-    expect(screen.getByLabelText('Date')).toHaveValue('2026-08-14')
-    expect(screen.getByLabelText('Paid by')).toHaveValue('u1')
-    expect(screen.getByLabelText('Split type')).toHaveValue('EQUAL')
+    expect(screen.getByLabelText('รายละเอียด')).toHaveValue('Dinner')
+    expect(screen.getByLabelText('จำนวนเงิน')).toHaveValue('100.00')
+    expect(screen.getByLabelText('วันที่')).toHaveValue('2026-08-14')
+    expect(screen.getByLabelText('ผู้จ่าย')).toHaveValue('u1')
+    expect(screen.getByLabelText('วิธีแบ่ง')).toHaveValue('EQUAL')
     expect(screen.getByRole('checkbox', { name: /Alice/ })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /Bob/ })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /Carol/ })).toBeChecked()
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: 'บันทึกการแก้ไข' })
     expect(saveButton).toBeEnabled()
 
-    await user.clear(screen.getByLabelText('Description'))
-    await user.type(screen.getByLabelText('Description'), 'Dinner (edited)')
+    await user.clear(screen.getByLabelText('รายละเอียด'))
+    await user.type(screen.getByLabelText('รายละเอียด'), 'Dinner (edited)')
     await user.click(saveButton)
 
     expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
