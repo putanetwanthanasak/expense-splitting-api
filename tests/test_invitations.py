@@ -116,10 +116,11 @@ def test_inviting_creates_a_pending_row_not_an_active_membership(client: TestCli
 
     _invite(client, owner_token, group_id, bob_id)
 
-    # Not in the group's member list...
+    # Visible in the group's member list (to an ACTIVE member) as PENDING...
     detail = client.get(f"/api/groups/{group_id}", headers=_auth(owner_token))
     assert detail.status_code == 200
-    assert bob_id not in {m["user_id"] for m in detail.json()["members"]}
+    members_by_id = {m["user_id"]: m for m in detail.json()["members"]}
+    assert members_by_id[bob_id]["status"] == "PENDING"
 
     # ...not in Bob's group list...
     assert client.get("/api/groups", headers=_auth(bob_token)).json() == []
@@ -453,6 +454,31 @@ def test_delete_on_active_member_with_nonzero_balance_still_409(client: TestClie
     )
     assert resp.status_code == 409
     assert resp.json()["detail"]["outstanding_balance"] == "-100.00"
+
+
+# --- GET /api/groups/{id} member list includes PENDING rows (§7.1) ------
+
+
+def test_group_detail_member_list_includes_pending_and_active_with_status(
+    client: TestClient,
+) -> None:
+    alice_id, alice_token, _ = _new_user(client)
+    bob_id, bob_token, _ = _new_user(client)
+    carol_id, _, _ = _new_user(client)
+    group_id = _create_group(client, alice_token)
+
+    _invite(client, alice_token, group_id, bob_id)
+    _accept(client, bob_token, group_id)  # bob ACTIVE
+    _invite(client, alice_token, group_id, carol_id)  # carol PENDING
+
+    # As an ACTIVE member, alice sees both bob (ACTIVE) and carol (PENDING).
+    detail = client.get(f"/api/groups/{group_id}", headers=_auth(alice_token))
+    assert detail.status_code == 200
+    members_by_id = {m["user_id"]: m for m in detail.json()["members"]}
+    assert set(members_by_id) == {alice_id, bob_id, carol_id}
+    assert members_by_id[alice_id]["status"] == "ACTIVE"
+    assert members_by_id[bob_id]["status"] == "ACTIVE"
+    assert members_by_id[carol_id]["status"] == "PENDING"
 
 
 # --- GET /api/groups excludes PENDING-only groups (§7.1) ---------------
