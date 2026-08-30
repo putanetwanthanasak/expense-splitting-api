@@ -3,36 +3,18 @@
  * 14). Two links: Groups (home) and Invitations, the latter carrying a badge
  * with the caller's pending-invitation count.
  *
- * The count is fetched once per navigation (on `location.pathname` change) —
- * good enough to notice a new invite after visiting another page, without
- * polling or any global state management (per the phase spec).
+ * The count comes in as a prop from AppLayout, which fetches it once per
+ * navigation (via usePendingInvitationCount) and shares the same number with
+ * the desktop <Sidebar> — one GET /api/me/invitations per navigation, not one
+ * per nav surface.
+ *
+ * On desktop (min-width: 1024px) this bar is hidden by CSS and the Sidebar
+ * takes over; below that it renders exactly as before.
  */
 
-import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
-import { invitationsApi } from '../lib/api'
-
-export function NavBar() {
-  const location = useLocation()
-  const [pendingCount, setPendingCount] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    invitationsApi
-      .list()
-      .then((invites) => {
-        if (!cancelled) setPendingCount(invites.length)
-      })
-      .catch(() => {
-        // Quiet failure: the badge just doesn't update. The Invitations page
-        // itself surfaces a real load error when the user visits it.
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [location.pathname])
-
+export function NavBar({ pendingCount }: { pendingCount: number }) {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'nav-link nav-link-active' : 'nav-link'
 

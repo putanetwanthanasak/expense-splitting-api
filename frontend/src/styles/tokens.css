@@ -1,0 +1,100 @@
+/**
+ * tokens.css — Phase 16 desktop design tokens.
+ *
+ * Every value here was read straight from the Figma file "expense-splitting-api",
+ * page "Desktop" (node ids noted inline): Sidebar/Desktop 5:3, Button/Primary
+ * 6:2, Button/Outline 6:4, Button/Danger 6:6, Tag/Pending 6:8, Tag/Remainder
+ * 6:10, Notice/Forbidden-403 6:12, Notice/Unauthorized-401 6:17, EmptyState
+ * 6:22, Desktop/Groups 9:2 (Main 9:18, GroupCard 9:26).
+ *
+ * These are `--ds-*`-prefixed custom-property *declarations* only. A custom
+ * property renders nothing until something references it, and the only things
+ * that reference these are the desktop-breakpoint rules in `desktop.css`
+ * (min-width: 1024px). Below that breakpoint nothing here has any effect — the
+ * existing mobile layout (index.css) is untouched.
+ */
+
+:root {
+  /* ---- Surfaces & lines ------------------------------------------------ */
+  --ds-color-canvas: #f4f7f6; /* Desktop/Groups frame fill 9:2; EmptyState fill 6:22 */
+  --ds-color-surface: #ffffff; /* Sidebar fill 5:3; GroupCard fill 9:26 */
+  --ds-color-border: #dde5e1; /* Sidebar stroke 5:3; card stroke 9:26; footer divider 5:15 */
+
+  /* ---- Text ---------------------------------------------------------- */
+  --ds-color-text: #17211e; /* brand text 5:6; nav inactive 5:11; footer name 5:17; headings 9:21 */
+  --ds-color-text-muted: #687570; /* Groups subtitle 9:22; notice body 6:16 */
+  --ds-color-text-faint: #94a09c; /* member count 9:29 */
+
+  /* ---- Brand / positive -------------------------------------------- */
+  --ds-color-brand: #16815f; /* brand mark 5:5; active nav text 5:9; Button/Primary fill 6:2; positive money 9:32 */
+  --ds-color-brand-wash: #e7f3ef; /* active NavItem fill 5:8 */
+  --ds-color-brand-wash-soft: #eef4f0; /* Tag/Remainder fill 6:10 */
+
+  /* ---- Negative / danger ----------------------------------------- */
+  --ds-color-danger: #c94d55; /* Badge fill 5:12; Button/Danger text 6:7; negative money 9:39; 401 accent 6:18 */
+
+  /* ---- Warning / pending --------------------------------------- */
+  --ds-color-warning: #9a7b2f; /* Tag/Pending text 6:9; 403 text 6:15 */
+  --ds-color-warning-wash: #f2ede0; /* Tag/Pending fill 6:8 */
+
+  /* ---- Notice washes ----------------------------------------- */
+  --ds-color-notice-403-bg: #fbf4e9; /* Notice/Forbidden-403 fill 6:12 */
+  --ds-color-notice-403-border: #e8d9b5; /* Notice/Forbidden-403 stroke 6:12 */
+  --ds-color-notice-401-bg: #fbeceb; /* Notice/Unauthorized-401 fill 6:17 */
+  --ds-color-notice-401-border: #f0c9c6; /* Notice/Unauthorized-401 stroke 6:17 */
+
+  /* ---- Radii ----------------------------------------------- */
+  --ds-radius-control: 12px; /* NavItem 5:8; Button/Primary 6:2 */
+  --ds-radius-notice: 14px; /* Notice/Forbidden-403 6:12 */
+  --ds-radius-panel: 16px; /* EmptyState 6:22 */
+  --ds-radius-card: 20px; /* GroupCard 9:26 */
+  --ds-radius-pill: 999px; /* Badge 5:12; Tag/Pending 6:8 */
+
+  /* ---- Elevation ------------------------------------------ */
+  /* GroupCard drop shadow 9:26 — colour #17211f (rgb 23 33 31) at 7%, y 8, blur 24 */
+  --ds-shadow-card: 0 8px 24px rgba(23, 33, 31, 0.07);
+
+  /* ---- Typography --------------------------------------- */
+  --ds-font-thai: 'Noto Sans Thai', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --ds-font-numeric: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --ds-size-brand: 20px; /* brand text 5:6 */
+  --ds-size-nav: 15px; /* nav item text 5:9 / 5:11 */
+  --ds-size-footer: 14px; /* footer user name 5:17 */
+  --ds-size-badge: 12px; /* badge number 5:13 */
+  --ds-weight-regular: 400; /* nav inactive 5:11 */
+  --ds-weight-semibold: 600; /* nav active 5:9; footer 5:17; badge 5:13 */
+  --ds-weight-bold: 700; /* brand 5:6 */
+
+  /* ---- Sidebar geometry (Sidebar/Desktop 5:3) ------------------ */
+  --ds-sidebar-width: 260px; /* component width 5:3 */
+  --ds-sidebar-pad-y: 32px; /* top padding 5:3 */
+  --ds-sidebar-pad-x: 20px; /* left / right padding 5:3 */
+  --ds-sidebar-pad-bottom: 24px; /* bottom padding 5:3 */
+  --ds-sidebar-gap: 6px; /* auto-layout gap between sections 5:3 */
+  --ds-sidebar-brand-gap: 10px; /* Brand row gap 5:4 */
+  --ds-sidebar-brand-dot: 32px; /* Brand ellipse 5:5 */
+  /* Brand → first nav item: 6px gap + 28px Spacer (5:7) + 6px gap = 40px */
+  --ds-sidebar-brand-to-nav: 40px;
+  --ds-sidebar-navitem-pad-y: 12px; /* NavItem padding 5:8 */
+  --ds-sidebar-navitem-pad-x: 14px; /* NavItem padding 5:8 */
+  --ds-sidebar-footer-pad-top: 16px; /* Footer padding-top 5:15 */
+  --ds-sidebar-footer-gap: 10px; /* Footer row gap 5:15 */
+  --ds-sidebar-footer-avatar: 36px; /* Footer ellipse 5:16 */
+  --ds-badge-pad-y: 2px; /* Badge padding 5:12 */
+  --ds-badge-pad-x: 8px; /* Badge padding 5:12 */
+
+  /* ---- Main content area (Desktop/Groups Main 9:18) ----------- */
+  --ds-main-pad-y: 48px; /* Main vertical padding 9:18 */
+  --ds-main-pad-x: 56px; /* Main horizontal padding 9:18 */
+  --ds-main-gap: 28px; /* Main section gap 9:18 */
+
+  /* ---- Breakpoint ------------------------------------------ */
+  /* The Desktop/Groups frame (9:2) is 1440px: a 260px sidebar (5:3) + 1180px
+     main (9:18). The desktop layout is fluid above the breakpoint — 1440 is
+     the design target, not the switch-over point. 260 (sidebar) + ~764
+     comfortable main content ≈ 1024, so the sidebar shell takes over at
+     1024px. Custom properties can't be used inside an @media condition, so
+     this value is also written literally in desktop.css — keep the two
+     in sync. */
+  --ds-breakpoint-desktop: 1024px;
+}
