@@ -163,6 +163,63 @@ describe('AddExpensePage', () => {
     expect(screen.queryByText(/cents/)).not.toBeInTheDocument()
   })
 
+  it('SHARES: previews the 2:1:1 split, flags a zero share in Thai, and submits the SHARES body', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'เพิ่มรายการใช้จ่าย' })
+    await user.type(screen.getByLabelText('รายละเอียด'), 'Petrol')
+    await user.type(screen.getByLabelText('จำนวนเงิน'), '100')
+    await user.selectOptions(screen.getByLabelText('วิธีแบ่ง'), 'SHARES')
+
+    await user.type(screen.getByLabelText('สัดส่วนของ Alice'), '2')
+    await user.type(screen.getByLabelText('สัดส่วนของ Bob'), '1')
+    await user.type(screen.getByLabelText('สัดส่วนของ Carol'), '1')
+
+    // Live preview: 2:1:1 of ฿100.00 -> largest-remainder ฿50 / ฿25 / ฿25, no odd cent.
+    const preview = screen.getByRole('heading', { name: 'ตัวอย่างการแบ่ง' }).closest('.preview')
+    expect(preview).not.toBeNull()
+    expect(preview).toHaveTextContent('Alice: ฿50.00')
+    expect(preview).toHaveTextContent('Bob: ฿25.00')
+    expect(preview).toHaveTextContent('Carol: ฿25.00')
+    expect(preview).not.toHaveTextContent('เศษสตางค์')
+    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
+
+    // A zero share -> the Thai message from messageOf(), never the raw English
+    // "must be a whole number > 0" from split.ts; preview + Save are withdrawn.
+    await user.clear(screen.getByLabelText('สัดส่วนของ Bob'))
+    await user.type(screen.getByLabelText('สัดส่วนของ Bob'), '0')
+    expect(
+      screen.getByText('จำนวนส่วนของแต่ละคนต้องเป็นจำนวนเต็มที่มากกว่า 0'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/whole number/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'ตัวอย่างการแบ่ง' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeDisabled()
+
+    // Restore a valid share and submit -> SHARES discriminated body.
+    await user.clear(screen.getByLabelText('สัดส่วนของ Bob'))
+    await user.type(screen.getByLabelText('สัดส่วนของ Bob'), '1')
+    await user.click(screen.getByRole('button', { name: 'บันทึกรายการ' }))
+
+    expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
+
+    const post = calls.find((c) => c.method === 'POST')
+    expect(post).toBeTruthy()
+    expect(JSON.parse(post!.body as string)).toMatchObject({
+      split_type: 'SHARES',
+      amount: '100.00',
+      description: 'Petrol',
+      paid_by_user_id: 'u1',
+      splits: [
+        { user_id: 'u1', shares: '2' },
+        { user_id: 'u2', shares: '1' },
+        { user_id: 'u3', shares: '1' },
+      ],
+    })
+  })
+
   it('renders the split-type options with Thai labels (real DOM, not CSS)', async () => {
     renderPage()
 
