@@ -154,11 +154,14 @@ export interface Group {
   created_at: string
 }
 
+export type MembershipStatus = 'PENDING' | 'ACTIVE'
+
 export interface GroupMember {
   user_id: string
   email: string
   name: string
   joined_at: string
+  status: MembershipStatus
 }
 
 export interface GroupDetail extends Group {
@@ -191,6 +194,13 @@ export const groupsApi = {
 
   balances: (groupId: string): Promise<GroupBalances> =>
     apiFetch<GroupBalances>(`/api/groups/${groupId}/balances`),
+
+  /** Invite an existing user by id — creates a PENDING row (§7.1). */
+  addMember: (groupId: string, userId: string): Promise<GroupMember> =>
+    apiFetch<GroupMember>(`/api/groups/${groupId}/members`, {
+      method: 'POST',
+      body: { user_id: userId },
+    }),
 }
 
 // --- Expenses ----------------------------------------------------------
@@ -316,4 +326,31 @@ export const settlementsApi = {
       method: 'POST',
       body,
     }),
+}
+
+// --- Invitations (§7.1) -------------------------------------------------
+
+export interface InvitationOut {
+  group_id: string
+  group_name: string
+  invited_at: string
+}
+
+export interface UserLookupOut {
+  id: string
+  email: string
+  name: string
+}
+
+export const invitationsApi = {
+  list: (): Promise<InvitationOut[]> => apiFetch<InvitationOut[]>('/api/me/invitations'),
+  accept: (groupId: string) =>
+    apiFetch(`/api/groups/${groupId}/members/me/accept`, { method: 'POST' }),
+  decline: (groupId: string) =>
+    apiFetch(`/api/groups/${groupId}/members/me/decline`, { method: 'POST' }),
+}
+
+export const usersApi = {
+  lookup: (email: string): Promise<UserLookupOut> =>
+    apiFetch<UserLookupOut>(`/api/users/lookup?email=${encodeURIComponent(email)}`),
 }

@@ -71,17 +71,23 @@ def get_group(group_id: uuid.UUID, group: RequireGroupMember, db: DbSession) -> 
         .join(User, User.id == GroupMember.user_id)
         .filter(
             GroupMember.group_id == group_id,
-            # ACTIVE only (§7.1): a PENDING invitee is not a member, so they
-            # don't appear in the member list any more than they do in
-            # /balances. The invitee sees the pending invite via
-            # GET /api/me/invitations.
-            GroupMember.status == MembershipStatus.ACTIVE,
+            # Both PENDING and ACTIVE rows (§7.1): the caller here is already
+            # known to be an ACTIVE member (require_group_member gates this
+            # endpoint), so showing who's been invited but hasn't accepted
+            # yet is safe -- each row carries its own `status` so the caller
+            # can tell them apart. This does NOT change who can call this
+            # endpoint, and every other group-scoped query (/balances,
+            # /settle-up, GET /api/groups, expense participants) stays
+            # ACTIVE-only exactly as before.
         )
         .order_by(GroupMember.joined_at, GroupMember.id)  # deterministic, not DB-default order
         .all()
     )
     members = [
-        GroupMemberOut(user_id=user.id, email=user.email, name=user.name, joined_at=gm.joined_at)
+        GroupMemberOut(
+            user_id=user.id, email=user.email, name=user.name, joined_at=gm.joined_at,
+            status=gm.status,
+        )
         for gm, user in rows
     ]
     return GroupDetail(
@@ -126,7 +132,11 @@ def add_group_member(
     user = db.get(User, payload.user_id)
     assert user is not None  # add_member already confirmed this user exists
     return GroupMemberOut(
-        user_id=user.id, email=user.email, name=user.name, joined_at=member.joined_at
+        user_id=user.id,
+        email=user.email,
+        name=user.name,
+        joined_at=member.joined_at,
+        status=member.status,
     )
 
 
@@ -153,7 +163,11 @@ def accept_group_invitation(
         ) from exc
 
     return GroupMemberOut(
-        user_id=user.id, email=user.email, name=user.name, joined_at=member.joined_at
+        user_id=user.id,
+        email=user.email,
+        name=user.name,
+        joined_at=member.joined_at,
+        status=member.status,
     )
 
 

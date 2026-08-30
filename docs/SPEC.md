@@ -523,6 +523,11 @@ Each needs a test.
 - `DELETE .../members/{uid}` on a PENDING row always succeeds (net is trivially
   0). On an ACTIVE member it is unchanged (409 if net ≠ 0).
 - `GET /api/groups` excludes a group where the caller is only PENDING.
+- `GET /api/groups/{id}`'s member list is the one exception: it returns every
+  member row, PENDING and ACTIVE, each carrying its own `status` field — so an
+  ACTIVE member can see who's been invited but hasn't accepted. This doesn't
+  change who may call the endpoint (still ACTIVE-only, §8.5); it only changes
+  what the member list inside the response contains.
 
 ### Settlements
 - Paying more than owed → allowed (the payer becomes a creditor), but return a
@@ -687,10 +692,14 @@ React + TypeScript + Vite.
 |---|---|
 | Login / Register | |
 | Group list | the user's groups plus their own net position in each |
-| Group detail | expenses, members, add-expense action |
-| Add expense | payer, amount, split type, participants |
+| Group detail | expenses, members (with PENDING status shown), add-expense action, invite-member form |
+| Add expense | payer, amount, split type, participants (ACTIVE members only, §7.1) |
 | Balance summary | who owes whom |
 | Settle up | simplified transfers + record-as-paid |
+| Invitations | the caller's own pending group invitations, with accept / decline (§7.1) |
+
+A persistent nav (Groups / Invitations) wraps every authenticated screen; the
+Invitations link carries a badge with the pending-invitation count.
 
 ### 14.1 The form changes with the split type
 - EQUAL → pick participants

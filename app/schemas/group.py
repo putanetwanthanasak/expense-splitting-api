@@ -5,6 +5,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.enums import MembershipStatus
+
 
 class GroupCreate(BaseModel):
     name: str = Field(min_length=1)
@@ -21,13 +23,18 @@ class GroupOut(BaseModel):
 
 class GroupMemberOut(BaseModel):
     """A group member as returned to clients — the user's public fields plus
-    when they joined this particular group.
+    when they joined this particular group and their membership status.
+
+    GET /api/groups/{id} returns both PENDING and ACTIVE rows (§7.1) so a
+    group's own active members can see who's been invited but hasn't
+    accepted yet; `status` is what distinguishes them.
     """
 
     user_id: uuid.UUID
     email: str
     name: str
     joined_at: datetime
+    status: MembershipStatus
 
 
 class GroupDetail(GroupOut):

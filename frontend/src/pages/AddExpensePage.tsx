@@ -83,11 +83,13 @@ export function AddExpensePage() {
       .get(id)
       .then((detail) => {
         if (cancelled) return
-        setMembers(detail.members)
-        setSelected(
-          Object.fromEntries(detail.members.map((m) => [m.user_id, true] as const)),
-        )
-        setPaidBy(detail.members[0]?.user_id ?? '')
+        // Only ACTIVE members can be a payer or participant (§7.1) -- a
+        // PENDING invitee isn't a member yet and the backend rejects their id
+        // as either with a 400, so they never appear in this picker.
+        const active = detail.members.filter((m) => m.status === 'ACTIVE')
+        setMembers(active)
+        setSelected(Object.fromEntries(active.map((m) => [m.user_id, true] as const)))
+        setPaidBy(active[0]?.user_id ?? '')
       })
       .catch((err: unknown) => {
         if (cancelled) return
