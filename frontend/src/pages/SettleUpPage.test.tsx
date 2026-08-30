@@ -14,9 +14,27 @@ const NOTE =
   'Simplified using greedy matching; guarantees at most N-1 transfers, not a proven minimum.'
 
 const members = [
-  { user_id: 'u1', email: 'a@x.com', name: 'Alice', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u2', email: 'b@x.com', name: 'Bob', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u3', email: 'c@x.com', name: 'Carol', joined_at: '2026-01-01T00:00:00Z' },
+  {
+    user_id: 'u1',
+    email: 'a@x.com',
+    name: 'Alice',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u2',
+    email: 'b@x.com',
+    name: 'Bob',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u3',
+    email: 'c@x.com',
+    name: 'Carol',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
 ]
 
 function jsonResponse(status: number, body: unknown): Response {

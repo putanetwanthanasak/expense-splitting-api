@@ -21,9 +21,27 @@ vi.mock('../auth/auth-context', () => ({
 }))
 
 const members = [
-  { user_id: 'u1', email: 'a@x.com', name: 'อลิซ', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u2', email: 'b@x.com', name: 'สมชาย', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u3', email: 'c@x.com', name: 'สมหญิง', joined_at: '2026-01-01T00:00:00Z' },
+  {
+    user_id: 'u1',
+    email: 'a@x.com',
+    name: 'อลิซ',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u2',
+    email: 'b@x.com',
+    name: 'สมชาย',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u3',
+    email: 'c@x.com',
+    name: 'สมหญิง',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
 ]
 
 function jsonResponse(status: number, body: unknown): Response {

@@ -18,9 +18,27 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AddExpensePage } from './AddExpensePage'
 
 const members = [
-  { user_id: 'u1', email: 'alice@x.com', name: 'Alice', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u2', email: 'bob@x.com', name: 'Bob', joined_at: '2026-01-01T00:00:00Z' },
-  { user_id: 'u3', email: 'carol@x.com', name: 'Carol', joined_at: '2026-01-01T00:00:00Z' },
+  {
+    user_id: 'u1',
+    email: 'alice@x.com',
+    name: 'Alice',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u2',
+    email: 'bob@x.com',
+    name: 'Bob',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
+  {
+    user_id: 'u3',
+    email: 'carol@x.com',
+    name: 'Carol',
+    joined_at: '2026-01-01T00:00:00Z',
+    status: 'ACTIVE' as const,
+  },
 ]
 
 function jsonResponse(status: number, body: unknown): Response {
