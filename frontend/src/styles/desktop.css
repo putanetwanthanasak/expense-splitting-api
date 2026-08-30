@@ -201,20 +201,46 @@
     background: var(--ds-color-canvas); /* FormArea fill 7:7 */
   }
   /* Green branding panel on the left (BrandPanel 7:3 / 7:25) — the real
-     <AuthBrandPanel> element, not generated content. */
+     <AuthBrandPanel> element (wordmark + headline + description), not generated
+     content. Stacked and vertically centred in the column. */
   .auth-brand-panel {
     display: flex;
+    flex-direction: column;
     grid-column: 1;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
     padding: 0 var(--ds-auth-panel-pad);
     background: var(--ds-color-brand);
   }
+  /* Small wordmark above the headline. */
   .auth-brand-name {
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-brand);
+    font-weight: var(--ds-weight-bold);
+    line-height: 1.4;
+  }
+  /* Marketing headline — BrandPanel headline slot (Figma 7:5). Two <span>s,
+     each on its own line. */
+  .auth-brand-headline {
+    margin: 0;
     color: var(--ds-color-surface);
     font-family: var(--ds-font-thai);
     font-size: var(--ds-size-hero);
     font-weight: var(--ds-weight-bold);
-    line-height: 1.4;
+    line-height: 1.25;
+  }
+  .auth-brand-headline span {
+    display: block;
+  }
+  .auth-brand-desc {
+    margin: 0;
+    color: var(--ds-color-brand-wash);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-regular);
+    line-height: 1.6;
   }
   .auth-card {
     grid-column: 2;
@@ -558,6 +584,7 @@
     font-family: var(--ds-font-thai);
     font-size: var(--ds-size-body);
     font-weight: var(--ds-weight-semibold);
+    white-space: nowrap;
   }
   .app-shell .group-detail-page .page-actions .button-link.secondary {
     background: var(--ds-color-surface);
@@ -604,7 +631,7 @@
   .app-shell .group-detail-page .invite-confirm-actions button,
   .app-shell .group-detail-page .expense-actions button,
   .app-shell .group-detail-page .expense-actions .button-link {
-    padding: 8px 14px;
+    padding: 9px 20px;
     border: 1px solid transparent;
     border-radius: var(--ds-radius-sm);
     background: var(--ds-color-brand);
@@ -612,6 +639,7 @@
     font-family: var(--ds-font-thai);
     font-size: var(--ds-size-btn-sm);
     font-weight: var(--ds-weight-semibold);
+    white-space: nowrap;
   }
   .app-shell .group-detail-page .member-list button.secondary,
   .app-shell .group-detail-page .invite-confirm-actions button.secondary,
@@ -626,7 +654,8 @@
     gap: 10px;
   }
   .app-shell .group-detail-page .invite-form input {
-    height: 40px;
+    min-width: 0; /* let the input shrink so the button keeps its full width */
+    height: 44px;
     padding: 0 var(--ds-field-pad-x);
     border: 1px solid var(--ds-color-border);
     border-radius: var(--ds-radius-control);
@@ -635,8 +664,10 @@
     font-size: var(--ds-size-body);
   }
   .app-shell .group-detail-page .invite-form button {
-    height: 40px;
-    padding: 0 16px;
+    flex: none; /* never shrink — "+ เชิญสมาชิก" was wrapping to two lines */
+    white-space: nowrap;
+    height: 44px;
+    padding: 0 22px;
     border: 0;
     border-radius: var(--ds-radius-control);
     background: var(--ds-color-brand);
@@ -663,12 +694,13 @@
     color: var(--ds-color-warning);
     font-size: var(--ds-size-label);
   }
-  /* Expense rows — description + faint meta, hairline divider (11:81) */
+  /* Expense rows — description, then the amount as the dominant figure on its
+     own line, then the secondary metadata muted below it (11:81 / 11:85). */
   .app-shell .group-detail-page .expense-list {
     gap: 0;
   }
   .app-shell .group-detail-page .expense-list li {
-    gap: 6px;
+    gap: 2px;
     padding: var(--ds-row-pad-y) 0;
     border: 0;
     border-bottom: 1px solid var(--ds-color-row-line);
@@ -677,6 +709,15 @@
   .app-shell .group-detail-page .expense-desc {
     font-size: var(--ds-size-body);
     font-weight: var(--ds-weight-regular);
+    color: var(--ds-color-text);
+  }
+  .app-shell .group-detail-page .expense-amount {
+    margin-top: 2px;
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-money-row);
+    font-weight: var(--ds-weight-bold);
+    line-height: 1.15;
+    color: var(--ds-color-text);
   }
   .app-shell .group-detail-page .expense-meta {
     color: var(--ds-color-text-faint);
