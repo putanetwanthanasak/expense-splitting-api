@@ -108,7 +108,7 @@ export function SettleUpPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page settle-up-page">
       <p>
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>

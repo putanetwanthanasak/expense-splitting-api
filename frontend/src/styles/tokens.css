@@ -143,4 +143,37 @@
   --ds-size-label: 13px; /* field label 7:11; card meta 10:40; auth link 7:23 */
   --ds-size-btn: 15px; /* auth submit label 7:22 */
   --ds-size-btn-sm: 13px; /* invitation button label 10:43 */
+
+  /* =====================================================================
+     Phase 18 — detail-page restyles: Group Detail 11:30 (Main 11:46),
+     Add Expense 13:45 (Main 13:61), Balance Summary 13:146 (Main 13:162),
+     Settle Up 13:210 (Main 13:226). Same contract as Phases 16-17:
+     referenced only by the min-width:1024px block in desktop.css, inert
+     for the mobile layout.
+     ===================================================================== */
+
+  /* ---- Shared line / wash colours new to this phase ---- */
+  --ds-color-row-line: #eef2f0; /* expense-row divider 11:81; Balance divider 13:186; Add-Expense dividers 13:61; segmented-control track */
+  --ds-color-row-wash: #f7faf9; /* Settle-Up transfer row fill 13:232 */
+  --ds-color-headline-border: #bfe0d4; /* Balance HeadlineCard stroke 13:166 */
+  --ds-color-disabled-bg: #cdd8d3; /* Add-Expense disabled submit fill 13:61 */
+  --ds-color-disabled-text: #7e8b86; /* Add-Expense disabled submit text 13:61 */
+
+  /* ---- Card / panel geometry ---- */
+  --ds-panel-pad: 24px; /* MembersPanel / ExpensesPanel / every Phase-18 card padding 11:57, 11:79, 13:166, 13:183, 13:230, 13:248 */
+  --ds-panel-gap: 16px; /* MembersPanel item gap 11:57; card section gap 13:166 */
+  --ds-detail-col-gap: 24px; /* Group Detail body gap 11:56; Add Expense body gap 13:61 */
+  --ds-detail-members-width: 360px; /* MembersPanel 11:57 */
+  --ds-form-card-width: 620px; /* Add Expense FormCard 13:61 */
+  --ds-preview-card-width: 424px; /* Add Expense PreviewCard 13:61 */
+  --ds-header-btn-pad-y: 12px; /* header action button padding 11:50 */
+  --ds-header-btn-pad-x: 18px; /* header action button padding 11:50 */
+  --ds-segmented-height: 44px; /* Add Expense Segmented control 13:61 */
+  --ds-row-pad-y: 12px; /* expense row vertical padding 11:81; transfer row 13:232 */
+
+  /* ---- Type scale additions ---- */
+  --ds-size-section: 16px; /* panel headings "สมาชิก" 11:59, "รายการค่าใช้จ่าย" 11:80, card <h2> 13:184 / 13:231 */
+  --ds-size-money-row: 16px; /* expense-row amount 11:85; member-balance amount 13:203 */
+  --ds-size-headline: 30px; /* Balance headline amount 13:170 */
+  --ds-size-meta: 12px; /* expense-row meta 11:84; card sub-line 13:185; settle-up disclaimer 13:244 */
 }

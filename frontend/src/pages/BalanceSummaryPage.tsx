@@ -69,7 +69,7 @@ export function BalanceSummaryPage() {
     data?.group.members.find((m) => m.user_id === userId)?.name ?? 'ไม่ทราบชื่อ'
 
   return (
-    <main className="page">
+    <main className="page balance-summary-page">
       <p>
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>

@@ -459,4 +459,496 @@
     color: var(--ds-color-danger);
     border: 1px solid var(--ds-color-border);
   }
+
+  /* =====================================================================
+     Phase 18 — detail-page restyles: Group Detail 11:30, Add Expense
+     13:45, Balance Summary 13:146, Settle Up 13:210.
+
+     Every selector is new and scoped to the page-root class each page now
+     carries on its <main> (`group-detail-page` / `add-expense-page` /
+     `balance-summary-page` / `settle-up-page`) so nothing leaks onto the
+     other authenticated pages. All copy is real JSX in the page
+     components — this file only positions and colours it. Nothing here
+     runs below 1024px; the mobile layout in index.css is untouched.
+     ===================================================================== */
+
+  .app-shell .group-detail-page,
+  .app-shell .add-expense-page,
+  .app-shell .balance-summary-page,
+  .app-shell .settle-up-page {
+    font-family: var(--ds-font-thai);
+    color: var(--ds-color-text);
+  }
+  /* These pages sit on always-light `--ds-*` card surfaces, so pin body copy
+     to the light-palette tokens too — the base index.css rules colour it with
+     the theme-reactive `--fg` / `--muted`, which turn near-white (invisible on
+     a white card) under `prefers-color-scheme: dark`. */
+  .app-shell .add-expense-page .split-row,
+  .app-shell .add-expense-page .split-row-name,
+  .app-shell .add-expense-page .participants label,
+  .app-shell .add-expense-page .preview li,
+  .app-shell .group-detail-page .member-list li,
+  .app-shell .group-detail-page .expense-desc,
+  .app-shell .balance-summary-page .balance-tree li,
+  .app-shell .settle-up-page .transfer-row,
+  .app-shell .settle-up-page .history-list li {
+    color: var(--ds-color-text);
+  }
+  .app-shell .add-expense-page .split-hint,
+  .app-shell .add-expense-page .running-total,
+  .app-shell .group-detail-page .confirm-inline,
+  .app-shell .group-detail-page .centered-status,
+  .app-shell .settle-up-page .centered-status {
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .group-detail-page > p:first-child a,
+  .app-shell .add-expense-page > p:first-child a,
+  .app-shell .balance-summary-page > p:first-child a,
+  .app-shell .settle-up-page > p:first-child a {
+    color: var(--ds-color-text-muted);
+    font-size: var(--ds-size-label);
+    text-decoration: none;
+  }
+  .app-shell .add-expense-page > h1,
+  .app-shell .balance-summary-page > h1,
+  .app-shell .settle-up-page > h1,
+  .app-shell .group-detail-page .page-head h1 {
+    margin: 0;
+    font-size: var(--ds-size-page-title);
+    font-weight: var(--ds-weight-bold);
+    color: var(--ds-color-text);
+  }
+  .app-shell .balance-summary-page section h2,
+  .app-shell .settle-up-page section h2,
+  .app-shell .group-detail-page > section h2,
+  .app-shell .add-expense-page .preview h2 {
+    margin: 0 0 var(--ds-panel-gap);
+    font-size: var(--ds-size-section);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text);
+  }
+
+  /* ---- Group Detail (11:30) — two-column: members panel + expenses panel */
+  .app-shell .group-detail-page {
+    max-width: none;
+    display: grid;
+    grid-template-columns: var(--ds-detail-members-width) minmax(0, 1fr);
+    column-gap: var(--ds-detail-col-gap);
+    row-gap: var(--ds-main-gap);
+    align-items: start;
+  }
+  .app-shell .group-detail-page > p,
+  .app-shell .group-detail-page > .page-head {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .app-shell .group-detail-page .page-head {
+    align-items: center;
+  }
+  .app-shell .group-detail-page .page-actions {
+    gap: 10px;
+  }
+  /* Header actions — green primary + two outline buttons (11:50 / 11:52 / 11:54) */
+  .app-shell .group-detail-page .page-actions .button-link {
+    padding: var(--ds-header-btn-pad-y) var(--ds-header-btn-pad-x);
+    border: 1px solid transparent;
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .group-detail-page .page-actions .button-link.secondary {
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    border-color: var(--ds-color-border);
+  }
+  /* Members / Expenses panels — white cards (11:57 / 11:79) */
+  .app-shell .group-detail-page > section {
+    margin: 0;
+    padding: var(--ds-panel-pad);
+    background: var(--ds-color-surface);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .group-detail-page .member-list {
+    gap: 4px;
+  }
+  .app-shell .group-detail-page .member-list li {
+    padding: 6px 0;
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .group-detail-page .member-list .muted {
+    color: var(--ds-color-text-faint);
+    font-size: var(--ds-size-label);
+  }
+  /* Pending tag — Tag/Pending component treatment (6:8): amber wash, no border */
+  .app-shell .group-detail-page .pending-tag {
+    margin-left: 8px;
+    padding: 4px 10px;
+    border: 0;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-warning-wash);
+    color: var(--ds-color-warning);
+    font-size: 11px;
+    font-weight: var(--ds-weight-semibold);
+    opacity: 1;
+  }
+  .app-shell .group-detail-page .confirm-inline {
+    color: var(--ds-color-text-muted);
+    font-size: var(--ds-size-label);
+  }
+  .app-shell .group-detail-page .member-list button,
+  .app-shell .group-detail-page .invite-confirm-actions button,
+  .app-shell .group-detail-page .expense-actions button,
+  .app-shell .group-detail-page .expense-actions .button-link {
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn-sm);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .group-detail-page .member-list button.secondary,
+  .app-shell .group-detail-page .invite-confirm-actions button.secondary,
+  .app-shell .group-detail-page .expense-actions button.secondary,
+  .app-shell .group-detail-page .expense-actions .button-link.secondary {
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    border-color: var(--ds-color-border);
+  }
+  .app-shell .group-detail-page .invite-form {
+    margin-top: var(--ds-panel-gap);
+    gap: 10px;
+  }
+  .app-shell .group-detail-page .invite-form input {
+    height: 40px;
+    padding: 0 var(--ds-field-pad-x);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .group-detail-page .invite-form button {
+    height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn-sm);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .group-detail-page .invite-confirm {
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-color-canvas);
+  }
+  .app-shell .group-detail-page .invite-confirm p {
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  /* Calm inline notices (403-wash), never the red banner */
+  .app-shell .group-detail-page .notice,
+  .app-shell .settle-up-page .notice {
+    border: 1px solid var(--ds-color-notice-403-border);
+    border-radius: var(--ds-radius-notice);
+    background: var(--ds-color-notice-403-bg);
+    color: var(--ds-color-warning);
+    font-size: var(--ds-size-label);
+  }
+  /* Expense rows — description + faint meta, hairline divider (11:81) */
+  .app-shell .group-detail-page .expense-list {
+    gap: 0;
+  }
+  .app-shell .group-detail-page .expense-list li {
+    gap: 6px;
+    padding: var(--ds-row-pad-y) 0;
+    border: 0;
+    border-bottom: 1px solid var(--ds-color-row-line);
+    border-radius: 0;
+  }
+  .app-shell .group-detail-page .expense-desc {
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-regular);
+  }
+  .app-shell .group-detail-page .expense-meta {
+    color: var(--ds-color-text-faint);
+    font-size: var(--ds-size-meta);
+  }
+  .app-shell .group-detail-page .centered-status {
+    color: var(--ds-color-text-muted);
+  }
+
+  /* ---- Add Expense (13:45) — single card, form above the split preview ---- */
+  .app-shell .add-expense-page {
+    max-width: 760px;
+    margin-inline: auto;
+    gap: var(--ds-main-gap);
+  }
+  .app-shell .add-expense-page .expense-form {
+    gap: 18px;
+    padding: var(--ds-panel-pad);
+    background: var(--ds-color-surface);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .add-expense-page .expense-form > label {
+    gap: 6px;
+    font-size: var(--ds-size-label);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text);
+  }
+  .app-shell .add-expense-page .expense-form input,
+  .app-shell .add-expense-page .expense-form select {
+    height: var(--ds-field-height);
+    padding: 0 var(--ds-field-pad-x);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-field);
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .add-expense-page .participants {
+    padding: var(--ds-panel-pad);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-field);
+  }
+  .app-shell .add-expense-page .participants legend {
+    padding: 0 6px;
+    font-size: var(--ds-size-label);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .add-expense-page .split-row {
+    padding: 6px 0;
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  .app-shell .add-expense-page .split-value {
+    height: 40px;
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-sm);
+  }
+  .app-shell .add-expense-page .running-total {
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .add-expense-page .running-total-off {
+    color: var(--ds-color-danger);
+  }
+  .app-shell .add-expense-page .split-hint {
+    font-size: var(--ds-size-label);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .add-expense-page .preview {
+    padding: var(--ds-panel-pad);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-color-canvas);
+  }
+  .app-shell .add-expense-page .preview ul {
+    gap: 8px;
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .add-expense-page .preview li {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ds-color-row-line);
+    color: var(--ds-color-text);
+  }
+  /* Remainder marker — friendly green pill (Tag/Remainder 6:10), never an error colour */
+  .app-shell .add-expense-page .remainder {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-brand-wash-soft);
+    color: var(--ds-color-brand);
+    font-size: 11px;
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .add-expense-page .preview .muted {
+    font-size: var(--ds-size-meta);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .add-expense-page .expense-form button[type='submit'] {
+    align-self: stretch;
+    height: 50px;
+    border-radius: var(--ds-radius-field);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .add-expense-page .expense-form button[type='submit']:disabled {
+    background: var(--ds-color-disabled-bg);
+    color: var(--ds-color-disabled-text);
+    opacity: 1;
+  }
+
+  /* ---- Balance Summary (13:146) — brand-wash headline card + members card ---- */
+  .app-shell .balance-summary-page {
+    max-width: none;
+    gap: var(--ds-main-gap);
+  }
+  .app-shell .balance-summary-page .balance-summary {
+    padding: var(--ds-panel-pad);
+    border: 1px solid var(--ds-color-headline-border);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-color-brand-wash);
+  }
+  .app-shell .balance-summary-page .balance-headline {
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-headline);
+    font-weight: var(--ds-weight-bold);
+  }
+  .app-shell .balance-summary-page .balance-headline.net-pos {
+    color: var(--ds-color-brand);
+  }
+  .app-shell .balance-summary-page .balance-headline.net-neg {
+    color: var(--ds-color-danger);
+  }
+  .app-shell .balance-summary-page .balance-headline.net-zero {
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .balance-summary-page .balance-tree {
+    margin-top: 12px;
+    gap: 10px;
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  .app-shell .balance-summary-page .balance-tree .tree-branch {
+    color: var(--ds-color-brand);
+  }
+  .app-shell .balance-summary-page > section:not(.balance-summary) {
+    padding: var(--ds-panel-pad);
+    background: var(--ds-color-surface);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .balance-summary-page .member-balances {
+    gap: 0;
+  }
+  .app-shell .balance-summary-page .member-balances li {
+    padding: var(--ds-row-pad-y) 0;
+    border-bottom: 1px solid var(--ds-color-row-line);
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .balance-summary-page .member-balances li.net-pos {
+    color: var(--ds-color-brand);
+  }
+  .app-shell .balance-summary-page .member-balances li.net-neg {
+    color: var(--ds-color-danger);
+  }
+  .app-shell .balance-summary-page .member-balances li.net-zero {
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .balance-summary-page .button-link {
+    display: inline-block;
+    padding: var(--ds-header-btn-pad-y) var(--ds-header-btn-pad-x);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-semibold);
+  }
+
+  /* ---- Settle Up (13:210) — suggested transfers card + history card ---- */
+  .app-shell .settle-up-page {
+    max-width: none;
+    gap: var(--ds-main-gap);
+  }
+  .app-shell .settle-up-page > section {
+    padding: var(--ds-panel-pad);
+    background: var(--ds-color-surface);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .settle-up-page .settle-note {
+    border-left: 3px solid var(--ds-color-brand);
+    padding-left: 12px;
+  }
+  .app-shell .settle-up-page .settle-note p {
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  .app-shell .settle-up-page .settle-note .muted {
+    font-size: var(--ds-size-meta);
+    color: var(--ds-color-text-faint);
+  }
+  .app-shell .settle-up-page .transfer-list {
+    margin-top: var(--ds-panel-gap);
+    gap: 8px;
+  }
+  .app-shell .settle-up-page .transfer-row {
+    padding: var(--ds-row-pad-y) 16px;
+    border: 0;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-row-wash);
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  .app-shell .settle-up-page .transfer-row strong {
+    font-family: var(--ds-font-numeric);
+    color: var(--ds-color-brand);
+  }
+  .app-shell .settle-up-page .transfer-row button {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn-sm);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .settle-up-page .transfer-row button:disabled {
+    background: var(--ds-color-disabled-bg);
+    color: var(--ds-color-disabled-text);
+    opacity: 1;
+  }
+  .app-shell .settle-up-page .history-list {
+    gap: 0;
+  }
+  .app-shell .settle-up-page .history-list li {
+    padding: var(--ds-row-pad-y) 0;
+    border: 0;
+    border-bottom: 1px solid var(--ds-color-row-line);
+    border-radius: 0;
+    font-size: var(--ds-size-body);
+    color: var(--ds-color-text);
+  }
+  .app-shell .settle-up-page .history-list .muted {
+    color: var(--ds-color-text-faint);
+    font-size: var(--ds-size-label);
+  }
+  .app-shell .settle-up-page .centered-status {
+    color: var(--ds-color-text-muted);
+  }
+
+  /* Celebratory / empty states on both summary pages — dashed panel (13:207 / 13:245) */
+  .app-shell .balance-summary-page .empty-state,
+  .app-shell .settle-up-page .empty-state {
+    padding: 40px 24px;
+    border: 1px dashed var(--ds-color-border);
+    border-radius: var(--ds-radius-panel);
+    background: var(--ds-color-canvas);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .balance-summary-page .empty-state-emoji,
+  .app-shell .settle-up-page .empty-state-emoji {
+    font-size: 40px;
+  }
 }

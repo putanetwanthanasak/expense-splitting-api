@@ -99,11 +99,11 @@ describe('GroupDetailPage', () => {
 
     const bobRow = (await screen.findByText('Bob')).closest('li')
     expect(bobRow).not.toBeNull()
-    expect(bobRow).toHaveTextContent('pending')
+    expect(bobRow).toHaveTextContent('รอการยอมรับ')
 
     const aliceRow = screen.getByText('Alice').closest('li')
     expect(aliceRow).not.toBeNull()
-    expect(aliceRow).not.toHaveTextContent('pending')
+    expect(aliceRow).not.toHaveTextContent('รอการยอมรับ')
   })
 
   it('shows a calm inline message when the looked-up email has no account', async () => {
@@ -119,10 +119,10 @@ describe('GroupDetailPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.type(screen.getByLabelText('Email to invite'), 'nobody@example.com')
-    await user.click(screen.getByRole('button', { name: /invite/i }))
+    await user.type(screen.getByLabelText('อีเมลที่ต้องการเชิญ'), 'nobody@example.com')
+    await user.click(screen.getByRole('button', { name: /เชิญสมาชิก/ }))
 
-    const notice = await screen.findByText('No account found with that email.')
+    const notice = await screen.findByText('ไม่พบบัญชีที่ใช้อีเมลนี้')
     expect(notice).not.toHaveAttribute('role', 'alert')
     expect(notice.className).not.toContain('form-error')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -150,16 +150,16 @@ describe('GroupDetailPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.type(screen.getByLabelText('Email to invite'), 'jane@example.com')
-    await user.click(screen.getByRole('button', { name: /invite/i }))
+    await user.type(screen.getByLabelText('อีเมลที่ต้องการเชิญ'), 'jane@example.com')
+    await user.click(screen.getByRole('button', { name: /เชิญสมาชิก/ }))
 
     // Lookup happened; confirmation is shown; the invite POST has NOT fired yet.
-    await screen.findByText('Invite Jane Doe (jane@example.com) to this group?')
+    await screen.findByText('เชิญ Jane Doe (jane@example.com) เข้ากลุ่มนี้หรือไม่?')
     expect(
       calls.some((c) => c.method === 'POST' && c.url.endsWith('/api/groups/g1/members')),
     ).toBe(false)
 
-    await user.click(screen.getByRole('button', { name: /confirm invite/i }))
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการเชิญ' }))
 
     // Now the POST has fired, as a call distinct from the lookup GET.
     const lookupCalls = calls.filter(
@@ -173,7 +173,7 @@ describe('GroupDetailPage', () => {
 
     // The new PENDING member now shows in the list.
     const janeRow = (await screen.findByText('Jane Doe')).closest('li')
-    expect(janeRow).toHaveTextContent('pending')
+    expect(janeRow).toHaveTextContent('รอการยอมรับ')
   })
 
   // --- delete expense (Phase 15) ------------------------------------------
@@ -188,6 +188,21 @@ describe('GroupDetailPage', () => {
     split_type: 'EQUAL',
     created_at: '2026-08-20T00:00:00Z',
   }
+
+  it('renders an expense meta line with the Thai split-type label', async () => {
+    stubFetch([], (url, method) => {
+      if (method === 'GET' && url.endsWith('/api/groups/g1/expenses')) {
+        return jsonResponse(200, { items: [EXPENSE], total: 1, limit: 50, offset: 0 })
+      }
+      return null
+    })
+
+    renderPage()
+
+    const meta = (await screen.findByText('Groceries')).closest('li')
+    expect(meta).toHaveTextContent('Alice จ่าย')
+    expect(meta).toHaveTextContent('เท่ากัน')
+  })
 
   it('requires a confirm click before deleting an expense, then removes it', async () => {
     const calls: Call[] = []
@@ -205,16 +220,16 @@ describe('GroupDetailPage', () => {
     renderPage()
 
     await screen.findByText('Groceries')
-    await user.click(screen.getByRole('button', { name: /^delete$/i }))
+    await user.click(screen.getByRole('button', { name: 'ลบ' }))
 
     // A single click does not delete -- the confirm step is required.
-    expect(screen.getByText('Delete this expense?')).toBeInTheDocument()
+    expect(screen.getByText('ลบรายการนี้?')).toBeInTheDocument()
     expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
     expect(screen.getByText('Groceries')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /^confirm$/i }))
+    await user.click(screen.getByRole('button', { name: 'ยืนยัน' }))
 
-    expect(await screen.findByText('No expenses yet.')).toBeInTheDocument()
+    expect(await screen.findByText('ยังไม่มีรายการค่าใช้จ่าย')).toBeInTheDocument()
     expect(screen.queryByText('Groceries')).not.toBeInTheDocument()
     expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/api/expenses/e1'))).toBe(
       true,
@@ -244,10 +259,10 @@ describe('GroupDetailPage', () => {
     const aliceRow = screen.getByText('Alice').closest('li')
     expect(aliceRow).not.toBeNull()
 
-    await user.click(within(aliceRow as HTMLElement).getByRole('button', { name: /^remove$/i }))
-    await user.click(within(aliceRow as HTMLElement).getByRole('button', { name: /^confirm$/i }))
+    await user.click(within(aliceRow as HTMLElement).getByRole('button', { name: 'นำออก' }))
+    await user.click(within(aliceRow as HTMLElement).getByRole('button', { name: 'ยืนยัน' }))
 
-    const notice = await screen.findByText(/outstanding balance of ฿100\.00/)
+    const notice = await screen.findByText(/ยอดค้างชำระอยู่ ฿100\.00/)
     expect(notice.className).toContain('notice')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
@@ -271,8 +286,8 @@ describe('GroupDetailPage', () => {
     const bobRow = screen.getByText('Bob').closest('li')
     expect(bobRow).not.toBeNull()
 
-    await user.click(within(bobRow as HTMLElement).getByRole('button', { name: /^remove$/i }))
-    await user.click(within(bobRow as HTMLElement).getByRole('button', { name: /^confirm$/i }))
+    await user.click(within(bobRow as HTMLElement).getByRole('button', { name: 'นำออก' }))
+    await user.click(within(bobRow as HTMLElement).getByRole('button', { name: 'ยืนยัน' }))
 
     await waitFor(() => expect(screen.queryByText('Bob')).not.toBeInTheDocument())
   })
