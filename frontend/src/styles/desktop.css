@@ -2,11 +2,13 @@
  * desktop.css — Phase 16 desktop shell.
  *
  * Everything visual lives inside `@media (min-width: 1024px)` (the breakpoint
- * documented as --ds-breakpoint-desktop in tokens.css). The one rule outside
- * the media query hides the Sidebar element on narrower viewports.
+ * documented as --ds-breakpoint-desktop in tokens.css). The only rules outside
+ * the media query hide desktop-only elements (Sidebar, AuthBrandPanel) on
+ * narrower viewports.
  *
- * Net effect below 1024px: the Sidebar is `display: none` and nothing else
- * changes — index.css and the mobile layout are byte-for-byte as before.
+ * Below 1024px those elements are `display: none` and nothing else changes —
+ * index.css and the mobile layout are as before (Phase 17 adds `.page-subtitle`
+ * as a real element with its own mobile baseline style in index.css).
  *
  * Imported after index.css in main.tsx so the desktop rules win on source
  * order at equal specificity.
@@ -15,6 +17,12 @@
 /* Hidden until the desktop breakpoint. Below it the mobile <NavBar> is the
    navigation and the existing layout is untouched. */
 .ds-sidebar {
+  display: none;
+}
+
+/* The auth split-panel is desktop-only; below the breakpoint the Login /
+   Register pages keep their existing centered mobile card. */
+.auth-brand-panel {
   display: none;
 }
 
@@ -136,13 +144,10 @@
   }
 
   /* ---- App shell reflow ------------------------------------------- */
-  /* The authenticated layout: fixed sidebar on the left, the existing page
-     content in a scrollable region to its right. Individual pages keep their
-     own styles for now (Phase 16 is foundation only) — this just stops them
-     rendering underneath the sidebar and gives the content the Figma main-area
-     insets (9:18). No background is set here on purpose: the content region
-     keeps the app's current ground (light/dark aware) until later phases
-     restyle the pages onto --ds-color-canvas. */
+  /* The authenticated layout: fixed sidebar on the left, the page content in
+     a scrollable region to its right, with the Figma main-area insets (9:18).
+     Phase 17 adds the --ds-color-canvas background here (see that section
+     below) — the light/dark-mismatch fix the Phase 16 note deferred. */
   .app-shell {
     position: fixed;
     inset: 0 0 0 var(--ds-sidebar-width);
@@ -158,5 +163,300 @@
   /* The mobile top nav is replaced by the sidebar on desktop. */
   .nav-bar {
     display: none;
+  }
+
+  /* =====================================================================
+     Phase 17 — page restyles: Login 7:2, Register 7:24, Groups 9:2,
+     Invitations 10:16.
+
+     Every selector below is new and lives inside this same 1024px media
+     block. Groups and Invitations carry a `groups-page` / `invitations-page`
+     class on their <main> purely as a CSS scoping hook so these rules can't
+     leak onto the other authenticated pages, which this phase does not
+     restyle. All user-facing text lives in real JSX now — the brand wordmark
+     (<AuthBrandPanel>) and the `.page-subtitle` lines — this file only
+     positions/styles those elements, it does not generate their text.
+     ===================================================================== */
+
+  /* Content region gets the Sidebar's canvas ground at this breakpoint
+     (Desktop/Groups Main fill 9:18 = --ds-color-canvas). Resolves the
+     light/dark mismatch the Phase 16 note deferred. */
+  .app-shell {
+    background: var(--ds-color-canvas);
+  }
+
+  /* ---- Login / Register — split panel (7:2 / 7:24) ----------------- */
+  /* Auth pages render outside AppLayout as `#root > main.auth-card`, so the
+     full-bleed override is scoped with :has() to just those pages.
+     Authenticated pages (no .auth-card) and every viewport < 1024px are
+     untouched. */
+  body:has(.auth-card) {
+    display: block;
+    padding: 0;
+  }
+  #root:has(> .auth-card) {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: var(--ds-auth-panel-width) 1fr;
+    background: var(--ds-color-canvas); /* FormArea fill 7:7 */
+  }
+  /* Green branding panel on the left (BrandPanel 7:3 / 7:25) — the real
+     <AuthBrandPanel> element, not generated content. */
+  .auth-brand-panel {
+    display: flex;
+    grid-column: 1;
+    align-items: center;
+    padding: 0 var(--ds-auth-panel-pad);
+    background: var(--ds-color-brand);
+  }
+  .auth-brand-name {
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-hero);
+    font-weight: var(--ds-weight-bold);
+    line-height: 1.4;
+  }
+  .auth-card {
+    grid-column: 2;
+    place-self: center;
+    width: var(--ds-auth-card-width);
+    max-width: none;
+    box-sizing: border-box;
+    gap: var(--ds-auth-card-gap);
+    padding: var(--ds-auth-card-pad-y) var(--ds-auth-card-pad-x);
+    background: var(--ds-color-surface);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .auth-card h1 {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-auth-title);
+    font-weight: var(--ds-weight-bold);
+    color: var(--ds-color-text);
+  }
+  .auth-card form {
+    gap: var(--ds-auth-card-gap);
+  }
+  .auth-card label {
+    gap: 6px;
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-label);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text);
+  }
+  .auth-card input {
+    height: var(--ds-field-height);
+    padding: 0 var(--ds-field-pad-x);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-field);
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    font-size: var(--ds-size-body);
+  }
+  .auth-card input::placeholder {
+    color: var(--ds-color-text-faint);
+  }
+  .auth-card button[type='submit'] {
+    height: var(--ds-field-height);
+    border-radius: var(--ds-radius-field);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn);
+    font-weight: var(--ds-weight-semibold);
+  }
+  /* Calm inline error — the amber "notice" treatment from Figma (7:18 / 7:20),
+     never a red system banner. Scoped to the auth card; the red .form-error on
+     other pages is left as-is. */
+  .auth-card .form-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-notice-403-bg);
+    color: var(--ds-color-warning);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-label);
+  }
+  .auth-card .form-error::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-warning);
+  }
+  .auth-card > p:last-child {
+    margin: 0;
+    text-align: center;
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-label);
+    color: var(--ds-color-text-muted);
+  }
+  .auth-card > p:last-child a {
+    color: var(--ds-color-brand);
+  }
+
+  /* ---- Shared: page heading inside the shell --------------------- */
+  .app-shell .groups-page .page-head h1,
+  .app-shell .invitations-page > h1 {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-page-title);
+    font-weight: var(--ds-weight-bold);
+    color: var(--ds-color-text);
+  }
+
+  /* ---- Groups (Desktop/Groups 9:2) ----------------------------- */
+  .app-shell .groups-page {
+    max-width: none;
+    gap: var(--ds-main-gap);
+  }
+  .app-shell .groups-page .page-head {
+    align-items: center;
+  }
+  /* Real <p className="page-subtitle"> under the <h1> (Figma subtitle 9:22). */
+  .app-shell .groups-page .page-subtitle {
+    margin: 4px 0 0;
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-regular);
+    color: var(--ds-color-text-muted);
+  }
+  /* "Log out" stays (behaviour); rendered as a quiet outline control. */
+  .app-shell .groups-page .page-head > button {
+    align-self: center;
+    padding: 10px 16px;
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn-sm);
+    font-weight: var(--ds-weight-semibold);
+  }
+  /* Create-group row → the green "+ กลุ่มใหม่" pill from Figma (9:23). */
+  .app-shell .groups-page .inline-form {
+    gap: 10px;
+    align-items: center;
+  }
+  .app-shell .groups-page .inline-form input {
+    height: 45px;
+    padding: 0 var(--ds-field-pad-x);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
+    font-size: var(--ds-size-body);
+  }
+  .app-shell .groups-page .inline-form button {
+    height: 45px;
+    padding: 0 18px;
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-semibold);
+  }
+  /* Card grid of GroupCards (Grid 9:25 / GroupCard 9:26). */
+  .app-shell .groups-page .group-list {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(var(--ds-groupcard-width), 1fr)
+    );
+    gap: var(--ds-grid-gap);
+  }
+  .app-shell .groups-page .group-list li {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--ds-groupcard-gap);
+    padding: var(--ds-groupcard-pad);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-color-surface);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .groups-page .group-list li > a {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-card-title);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text);
+    text-decoration: none;
+  }
+  /* Balance status — restyle of the page's own output, colours per Figma
+     (owed 9:32 / owe 9:39 / settled 9:44). The +/- logic is untouched. */
+  .app-shell .groups-page .group-list .net {
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-amount);
+    font-weight: var(--ds-weight-bold);
+  }
+  .app-shell .groups-page .group-list .net-pos {
+    color: var(--ds-color-brand);
+  }
+  .app-shell .groups-page .group-list .net-neg {
+    color: var(--ds-color-danger);
+  }
+  .app-shell .groups-page .group-list .net-zero {
+    color: var(--ds-color-text-muted);
+  }
+
+  /* ---- Invitations (Desktop/Invitations 10:16) --------------------- */
+  .app-shell .invitations-page {
+    max-width: none;
+    gap: var(--ds-main-gap);
+  }
+  /* Real <p className="page-subtitle"> under the <h1> (Figma subtitle 10:35).
+     InvitationsPage only renders it when there is a list to introduce. */
+  .app-shell .invitations-page .page-subtitle {
+    margin: 4px 0 0;
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-body);
+    font-weight: var(--ds-weight-regular);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .invitations-page .invitation-list {
+    max-width: var(--ds-invite-list-width);
+    gap: 14px;
+  }
+  .app-shell .invitations-page .invitation-row {
+    align-items: center;
+    padding: var(--ds-invite-card-pad-y) var(--ds-invite-card-pad-x);
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-invite-card);
+    background: var(--ds-color-surface);
+    box-shadow: var(--ds-shadow-card);
+  }
+  .app-shell .invitations-page .invitation-group-name {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-invite-title);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-color-text);
+  }
+  .app-shell .invitations-page .invitation-info .muted {
+    font-size: var(--ds-size-label);
+    color: var(--ds-color-text-muted);
+  }
+  .app-shell .invitations-page .invitation-actions {
+    gap: 10px;
+  }
+  .app-shell .invitations-page .invitation-actions button {
+    padding: var(--ds-invite-btn-pad-y) var(--ds-invite-btn-pad-x);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-brand);
+    color: var(--ds-color-surface);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-btn-sm);
+    font-weight: var(--ds-weight-semibold);
+  }
+  /* Decline → outline with danger text (ปฏิเสธ 10:45) */
+  .app-shell .invitations-page .invitation-actions button.secondary {
+    background: var(--ds-color-surface);
+    color: var(--ds-color-danger);
+    border: 1px solid var(--ds-color-border);
   }
 }

@@ -44,7 +44,7 @@ export function InvitationsPage() {
       .catch((err: unknown) => {
         if (!cancelled) {
           setLoadError(
-            err instanceof ApiError ? err.detail : 'Could not load your invitations.',
+            err instanceof ApiError ? err.detail : 'โหลดคำเชิญไม่สำเร็จ',
           )
         }
       })
@@ -68,11 +68,11 @@ export function InvitationsPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         removeInvitation(groupId)
-        setNotice('That invitation is no longer available.')
+        setNotice('คำเชิญนี้ไม่สามารถใช้ได้แล้ว')
       } else {
         setRowErrors((e) => ({
           ...e,
-          [groupId]: err instanceof ApiError ? err.detail : 'Could not accept this invitation.',
+          [groupId]: err instanceof ApiError ? err.detail : 'ยอมรับคำเชิญไม่สำเร็จ',
         }))
       }
     } finally {
@@ -90,11 +90,11 @@ export function InvitationsPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         removeInvitation(groupId)
-        setNotice('That invitation is no longer available.')
+        setNotice('คำเชิญนี้ไม่สามารถใช้ได้แล้ว')
       } else {
         setRowErrors((e) => ({
           ...e,
-          [groupId]: err instanceof ApiError ? err.detail : 'Could not decline this invitation.',
+          [groupId]: err instanceof ApiError ? err.detail : 'ปฏิเสธคำเชิญไม่สำเร็จ',
         }))
       }
     } finally {
@@ -103,8 +103,12 @@ export function InvitationsPage() {
   }
 
   return (
-    <main className="page">
-      <h1>Invitations</h1>
+    <main className="page invitations-page">
+      <h1>คำเชิญเข้าร่วมกลุ่ม</h1>
+
+      {invitations !== null && invitations.length > 0 && (
+        <p className="page-subtitle">ยอมรับเพื่อเข้าร่วมกลุ่มและเริ่มแบ่งค่าใช้จ่าย</p>
+      )}
 
       {loadError !== null && (
         <p role="alert" className="form-error">
@@ -115,11 +119,11 @@ export function InvitationsPage() {
       {notice !== null && <p className="notice">{notice}</p>}
 
       {invitations === null && loadError === null && (
-        <p className="centered-status">Loading…</p>
+        <p className="centered-status">กำลังโหลด…</p>
       )}
 
       {invitations !== null && invitations.length === 0 && (
-        <p className="centered-status">No pending invitations.</p>
+        <p className="centered-status">ไม่มีคำเชิญที่รอตอบรับ</p>
       )}
 
       {invitations !== null && invitations.length > 0 && (
@@ -132,7 +136,7 @@ export function InvitationsPage() {
               <li key={inv.group_id} className="invitation-row">
                 <div className="invitation-info">
                   <span className="invitation-group-name">{inv.group_name}</span>
-                  <span className="muted">Invited {formatInvitedAt(inv.invited_at)}</span>
+                  <span className="muted">เชิญเมื่อ {formatInvitedAt(inv.invited_at)}</span>
                   {rowErrors[inv.group_id] && (
                     <p role="alert" className="form-error">
                       {rowErrors[inv.group_id]}
@@ -145,7 +149,7 @@ export function InvitationsPage() {
                     onClick={() => onAccept(inv.group_id)}
                     disabled={isPending}
                   >
-                    {acceptPending ? 'Accepting…' : 'Accept'}
+                    {acceptPending ? 'กำลังยอมรับ…' : 'ยอมรับ'}
                   </button>
                   <button
                     type="button"
@@ -153,7 +157,7 @@ export function InvitationsPage() {
                     onClick={() => onDecline(inv.group_id)}
                     disabled={isPending}
                   >
-                    {declinePending ? 'Declining…' : 'Decline'}
+                    {declinePending ? 'กำลังปฏิเสธ…' : 'ปฏิเสธ'}
                   </button>
                 </div>
               </li>

@@ -97,4 +97,50 @@
      this value is also written literally in desktop.css — keep the two
      in sync. */
   --ds-breakpoint-desktop: 1024px;
+
+  /* =====================================================================
+     Phase 17 — page restyles: Login 7:2, Register 7:24, Groups 9:2,
+     Invitations 10:16. Same rules as Phase 16: consumed only by the
+     min-width:1024px block in desktop.css, inert for the mobile layout.
+     ===================================================================== */
+
+  /* ---- Auth split-panel (Desktop/Login 7:2, Desktop/Register 7:24) ---- */
+  --ds-auth-panel-width: 560px; /* BrandPanel 7:3 / 7:25 */
+  --ds-auth-panel-pad: 64px; /* BrandPanel left/right padding 7:3 */
+  --ds-auth-card-width: 400px; /* LoginCard 7:8 / RegisterCard 7:30 */
+  --ds-auth-card-pad-y: 40px; /* LoginCard padding 7:8 */
+  --ds-auth-card-pad-x: 36px; /* LoginCard padding 7:8 */
+  --ds-auth-card-gap: 18px; /* LoginCard item gap 7:8 */
+  --ds-field-height: 52px; /* input frame 7:12; submit 7:21 */
+  --ds-field-pad-x: 16px; /* input horizontal padding 7:12 */
+
+  /* ---- Radii beyond Phase 16's set ---- */
+  --ds-radius-field: 14px; /* input + auth submit 7:12 / 7:21 */
+  --ds-radius-sm: 10px; /* inline error box 7:18; invitation buttons 10:42 */
+  --ds-radius-invite-card: 18px; /* InvitationCard 10:37 */
+
+  /* ---- Groups card grid (Desktop/Groups 9:2) ---- */
+  --ds-groupcard-width: 340px; /* GroupCard 9:26 */
+  --ds-groupcard-pad: 24px; /* GroupCard padding 9:26 */
+  --ds-groupcard-gap: 14px; /* GroupCard item gap 9:26 */
+  --ds-grid-gap: 20px; /* Grid gap + wrap spacing 9:25 */
+
+  /* ---- Invitations list (Desktop/Invitations 10:16) ---- */
+  --ds-invite-list-width: 720px; /* List 10:36 */
+  --ds-invite-card-pad-y: 20px; /* InvitationCard padding 10:37 */
+  --ds-invite-card-pad-x: 24px; /* InvitationCard padding 10:37 */
+  --ds-invite-btn-pad-y: 10px; /* accept / decline padding 10:42 */
+  --ds-invite-btn-pad-x: 18px; /* accept / decline padding 10:42 */
+
+  /* ---- Type scale for the restyled pages ---- */
+  --ds-size-hero: 32px; /* BrandPanel headline 7:5 */
+  --ds-size-page-title: 26px; /* page <h1> 9:21 / 10:34 */
+  --ds-size-auth-title: 24px; /* auth card <h1> 7:9 / 7:31 */
+  --ds-size-amount: 28px; /* GroupCard amount 9:32 */
+  --ds-size-card-title: 17px; /* GroupCard name 9:28 */
+  --ds-size-invite-title: 16px; /* InvitationCard name 10:39 */
+  --ds-size-body: 14px; /* page subtitle 9:22; input text 7:13 */
+  --ds-size-label: 13px; /* field label 7:11; card meta 10:40; auth link 7:23 */
+  --ds-size-btn: 15px; /* auth submit label 7:22 */
+  --ds-size-btn-sm: 13px; /* invitation button label 10:43 */
 }

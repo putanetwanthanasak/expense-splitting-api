@@ -60,18 +60,23 @@ describe('LoginPage — wrong password', () => {
     const user = userEvent.setup()
     renderLoginAt()
 
-    await user.type(screen.getByLabelText(/email/i), 'someone@example.com')
-    await user.type(screen.getByLabelText(/password/i), 'wrong-password')
-    await user.click(screen.getByRole('button', { name: /log in/i }))
+    await user.type(screen.getByLabelText('อีเมล'), 'someone@example.com')
+    await user.type(screen.getByLabelText('รหัสผ่าน'), 'wrong-password')
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }))
 
     // The error is shown, on this page.
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Incorrect email or password',
     )
     // Still on the login page — not redirected to Home, not hard-reloaded.
-    expect(screen.getByRole('heading', { name: /log in/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /signed in/i })).not.toBeInTheDocument()
     expect(loc.assign).not.toHaveBeenCalled()
+  })
+
+  it('renders the brand wordmark as real DOM text', () => {
+    renderLoginAt()
+    expect(screen.getByText('แบ่งจ่าย')).toBeInTheDocument()
   })
 
   it('a correct password navigates to the protected home route', async () => {
@@ -103,9 +108,9 @@ describe('LoginPage — wrong password', () => {
     const user = userEvent.setup()
     renderLoginAt()
 
-    await user.type(screen.getByLabelText(/email/i), 'someone@example.com')
-    await user.type(screen.getByLabelText(/password/i), 'correct-horse')
-    await user.click(screen.getByRole('button', { name: /log in/i }))
+    await user.type(screen.getByLabelText('อีเมล'), 'someone@example.com')
+    await user.type(screen.getByLabelText('รหัสผ่าน'), 'correct-horse')
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }))
 
     expect(await screen.findByRole('heading', { name: /signed in/i })).toBeInTheDocument()
   })
