@@ -74,9 +74,16 @@ describe('LoginPage — wrong password', () => {
     expect(loc.assign).not.toHaveBeenCalled()
   })
 
-  it('renders the brand wordmark as real DOM text', () => {
+  it('renders the brand panel (wordmark, headline, description) as real DOM text', () => {
     renderLoginAt()
     expect(screen.getByText('แบ่งจ่าย')).toBeInTheDocument()
+    expect(screen.getByText('แบ่งจ่ายให้ลงตัว')).toBeInTheDocument()
+    expect(screen.getByText('ไม่ต้องคิดเลขเอง')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'บันทึกค่าใช้จ่ายกลุ่ม แบ่งยอดอัตโนมัติ และเคลียร์หนี้กันได้ง่าย ๆ',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('a correct password navigates to the protected home route', async () => {

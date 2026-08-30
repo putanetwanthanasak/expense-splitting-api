@@ -368,10 +368,12 @@ export function GroupDetailPage() {
                 {expenses.map((e) => (
                   <li key={e.id}>
                     <span className="expense-desc">{e.description}</span>
+                    <span className="expense-amount">
+                      {formatMoney(parseMoney(e.amount))}
+                    </span>
                     <span className="expense-meta">
-                      {formatMoney(parseMoney(e.amount))} · {nameOf(e.paid_by_user_id)} จ่าย
-                      {' · '}
-                      {e.expense_date} · {SPLIT_TYPE_TH[e.split_type]}
+                      {nameOf(e.paid_by_user_id)} จ่าย · {e.expense_date} ·{' '}
+                      {SPLIT_TYPE_TH[e.split_type]}
                     </span>
                     <div className="expense-actions">
                       <Link
