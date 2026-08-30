@@ -1,0 +1,162 @@
+/**
+ * desktop.css — Phase 16 desktop shell.
+ *
+ * Everything visual lives inside `@media (min-width: 1024px)` (the breakpoint
+ * documented as --ds-breakpoint-desktop in tokens.css). The one rule outside
+ * the media query hides the Sidebar element on narrower viewports.
+ *
+ * Net effect below 1024px: the Sidebar is `display: none` and nothing else
+ * changes — index.css and the mobile layout are byte-for-byte as before.
+ *
+ * Imported after index.css in main.tsx so the desktop rules win on source
+ * order at equal specificity.
+ */
+
+/* Hidden until the desktop breakpoint. Below it the mobile <NavBar> is the
+   navigation and the existing layout is untouched. */
+.ds-sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  /* ---- Sidebar shell — matches Figma Sidebar/Desktop (5:3) ---------- */
+  .ds-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--ds-sidebar-width);
+    box-sizing: border-box;
+    padding: var(--ds-sidebar-pad-y) var(--ds-sidebar-pad-x)
+      var(--ds-sidebar-pad-bottom);
+    background: var(--ds-color-surface);
+    border-right: 1px solid var(--ds-color-border);
+    overflow: hidden;
+    z-index: 20;
+  }
+
+  /* Brand mark — green dot + wordmark (5:4 / 5:5 / 5:6) */
+  .ds-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-sidebar-brand-gap);
+    text-decoration: none;
+    color: inherit;
+  }
+  .ds-brand-mark {
+    flex: none;
+    width: var(--ds-sidebar-brand-dot);
+    height: var(--ds-sidebar-brand-dot);
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-brand);
+  }
+  .ds-brand-name {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-brand);
+    font-weight: var(--ds-weight-bold);
+    line-height: 1.4;
+    color: var(--ds-color-text);
+  }
+
+  /* Nav list (5:7 spacer + 5:8 / 5:10 NavItems) */
+  .ds-sidebar-nav {
+    margin-top: var(--ds-sidebar-brand-to-nav);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-sidebar-gap);
+  }
+  .ds-navitem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: var(--ds-sidebar-navitem-pad-y) var(--ds-sidebar-navitem-pad-x);
+    border-radius: var(--ds-radius-control);
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-nav);
+    font-weight: var(--ds-weight-regular);
+    color: var(--ds-color-text);
+    text-decoration: none;
+  }
+  .ds-navitem-active {
+    background: var(--ds-color-brand-wash);
+    color: var(--ds-color-brand);
+    font-weight: var(--ds-weight-semibold);
+  }
+
+  /* Pending-invitation badge (5:12 / 5:13) */
+  .ds-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    box-sizing: border-box;
+    padding: var(--ds-badge-pad-y) var(--ds-badge-pad-x);
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-danger);
+    color: #ffffff;
+    font-family: var(--ds-font-numeric);
+    font-size: var(--ds-size-badge);
+    font-weight: var(--ds-weight-semibold);
+    line-height: 1;
+  }
+
+  /* Flexible spacer that pushes the footer down (5:14 "Grow") */
+  .ds-sidebar-grow {
+    flex: 1 1 auto;
+  }
+
+  /* Footer — avatar + current user (5:15 / 5:16 / 5:17) */
+  .ds-sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-sidebar-footer-gap);
+    margin-top: var(--ds-sidebar-gap);
+    padding-top: var(--ds-sidebar-footer-pad-top);
+    border-top: 1px solid var(--ds-color-border);
+  }
+  .ds-avatar {
+    flex: none;
+    width: var(--ds-sidebar-footer-avatar);
+    height: var(--ds-sidebar-footer-avatar);
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-color-border);
+  }
+  .ds-sidebar-user {
+    min-width: 0;
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-footer);
+    font-weight: var(--ds-weight-semibold);
+    line-height: 1.4;
+    color: var(--ds-color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---- App shell reflow ------------------------------------------- */
+  /* The authenticated layout: fixed sidebar on the left, the existing page
+     content in a scrollable region to its right. Individual pages keep their
+     own styles for now (Phase 16 is foundation only) — this just stops them
+     rendering underneath the sidebar and gives the content the Figma main-area
+     insets (9:18). No background is set here on purpose: the content region
+     keeps the app's current ground (light/dark aware) until later phases
+     restyle the pages onto --ds-color-canvas. */
+  .app-shell {
+    position: fixed;
+    inset: 0 0 0 var(--ds-sidebar-width);
+    display: block;
+    width: auto;
+    max-width: none;
+    gap: 0;
+    box-sizing: border-box;
+    padding: var(--ds-main-pad-y) var(--ds-main-pad-x);
+    overflow-y: auto;
+  }
+
+  /* The mobile top nav is replaced by the sidebar on desktop. */
+  .nav-bar {
+    display: none;
+  }
+}
