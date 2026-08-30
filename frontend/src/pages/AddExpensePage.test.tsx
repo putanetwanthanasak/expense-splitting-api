@@ -179,3 +179,114 @@ describe('AddExpensePage', () => {
     })
   })
 })
+
+// --- edit mode (Phase 15) ---------------------------------------------
+
+const EXISTING_EXPENSE = {
+  id: 'e1',
+  group_id: 'g1',
+  paid_by_user_id: 'u1',
+  amount: '100.00',
+  description: 'Dinner',
+  expense_date: '2026-08-14',
+  split_type: 'EQUAL',
+  created_at: '2026-08-14T00:00:00Z',
+  splits: [
+    { user_id: 'u1', amount_owed: '33.34' },
+    { user_id: 'u2', amount_owed: '33.33' },
+    { user_id: 'u3', amount_owed: '33.33' },
+  ],
+}
+
+function stubEditFetch(calls: Call[]) {
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    const method = init?.method ?? 'GET'
+    calls.push({ url, method, body: typeof init?.body === 'string' ? init.body : null })
+
+    if (method === 'GET' && url.endsWith('/api/groups/g1')) {
+      return Promise.resolve(
+        jsonResponse(200, {
+          id: 'g1',
+          name: 'Trip',
+          created_by_user_id: 'u1',
+          created_at: '2026-01-01T00:00:00Z',
+          members,
+        }),
+      )
+    }
+    if (method === 'GET' && url.endsWith('/api/expenses/e1')) {
+      return Promise.resolve(jsonResponse(200, EXISTING_EXPENSE))
+    }
+    if (method === 'PATCH' && url.endsWith('/api/expenses/e1')) {
+      return Promise.resolve(jsonResponse(200, { ...EXISTING_EXPENSE, description: 'Dinner (edited)' }))
+    }
+    return Promise.resolve(jsonResponse(404, { detail: `unexpected ${method} ${url}` }))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+}
+
+function renderEditPage() {
+  return render(
+    <MemoryRouter initialEntries={['/groups/g1/expenses/e1/edit']}>
+      <Routes>
+        <Route path="/groups/:groupId/expenses/:expenseId/edit" element={<AddExpensePage />} />
+        <Route path="/groups/:groupId" element={<div>Group g1 detail</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
+describe('AddExpensePage — edit mode', () => {
+  let calls: Call[]
+
+  beforeEach(() => {
+    calls = []
+    stubEditFetch(calls)
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('pre-fills the form from GET /api/expenses/:id and submits a PATCH', async () => {
+    const user = userEvent.setup()
+    renderEditPage()
+
+    await screen.findByRole('heading', { name: 'Edit expense' })
+
+    expect(screen.getByLabelText('Description')).toHaveValue('Dinner')
+    expect(screen.getByLabelText('Amount')).toHaveValue('100.00')
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-08-14')
+    expect(screen.getByLabelText('Paid by')).toHaveValue('u1')
+    expect(screen.getByLabelText('Split type')).toHaveValue('EQUAL')
+    expect(screen.getByRole('checkbox', { name: /Alice/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Bob/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Carol/ })).toBeChecked()
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    expect(saveButton).toBeEnabled()
+
+    await user.clear(screen.getByLabelText('Description'))
+    await user.type(screen.getByLabelText('Description'), 'Dinner (edited)')
+    await user.click(saveButton)
+
+    expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
+
+    const patch = calls.find((c) => c.method === 'PATCH')
+    expect(patch).toBeTruthy()
+    expect(patch!.url).toContain('/api/expenses/e1')
+    expect(JSON.parse(patch!.body as string)).toMatchObject({
+      split_type: 'EQUAL',
+      amount: '100.00',
+      description: 'Dinner (edited)',
+      paid_by_user_id: 'u1',
+      participant_user_ids: ['u1', 'u2', 'u3'],
+    })
+
+    // The create endpoint was never hit for an edit.
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+  })
+})

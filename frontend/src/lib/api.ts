@@ -201,6 +201,14 @@ export const groupsApi = {
       method: 'POST',
       body: { user_id: userId },
     }),
+
+  /**
+   * Remove a member (or revoke a PENDING invitation, §7.1/§9). 409 if the
+   * member's net balance isn't zero — the response body is
+   * `{ detail: { message, outstanding_balance } }`, not a plain string.
+   */
+  removeMember: (groupId: string, userId: string): Promise<void> =>
+    apiFetch<void>(`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
 }
 
 // --- Expenses ----------------------------------------------------------
@@ -272,6 +280,19 @@ export const expensesApi = {
       method: 'POST',
       body,
     }),
+
+  get: (expenseId: string): Promise<ExpenseDetail> =>
+    apiFetch<ExpenseDetail>(`/api/expenses/${expenseId}`),
+
+  /** PATCH replaces the whole expense — same body shape as `create` (§9). */
+  update: (expenseId: string, body: ExpenseCreateBody): Promise<ExpenseDetail> =>
+    apiFetch<ExpenseDetail>(`/api/expenses/${expenseId}`, {
+      method: 'PATCH',
+      body,
+    }),
+
+  remove: (expenseId: string): Promise<void> =>
+    apiFetch<void>(`/api/expenses/${expenseId}`, { method: 'DELETE' }),
 }
 
 // --- Settle up / settlements -----------------------------------------

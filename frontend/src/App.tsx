@@ -30,6 +30,10 @@ export default function App() {
             <Route path="/invitations" element={<InvitationsPage />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             <Route path="/groups/:groupId/expenses/new" element={<AddExpensePage />} />
+            <Route
+              path="/groups/:groupId/expenses/:expenseId/edit"
+              element={<AddExpensePage />}
+            />
             <Route path="/groups/:groupId/balances" element={<BalanceSummaryPage />} />
             <Route path="/groups/:groupId/settle" element={<SettleUpPage />} />
           </Route>

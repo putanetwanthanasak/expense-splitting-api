@@ -553,7 +553,10 @@ a {
 }
 
 .invite-confirm-actions button,
-.invitation-actions button {
+.invitation-actions button,
+.member-list button,
+.expense-actions button,
+.confirm-inline button {
   padding: 0.4rem 0.7rem;
   border: 0;
   border-radius: 0.375rem;
@@ -565,7 +568,10 @@ a {
 }
 
 .invite-confirm-actions button:disabled,
-.invitation-actions button:disabled {
+.invitation-actions button:disabled,
+.member-list button:disabled,
+.expense-actions button:disabled,
+.confirm-inline button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -609,4 +615,31 @@ button.secondary {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+/* --- Phase 15: expense edit/delete + member removal --------------------- */
+
+.member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.expense-list li {
+  gap: 0.5rem;
+}
+
+.expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirm-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
