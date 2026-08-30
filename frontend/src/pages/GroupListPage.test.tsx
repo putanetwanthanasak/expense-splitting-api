@@ -73,6 +73,17 @@ afterEach(() => {
 })
 
 describe('GroupListPage', () => {
+  it('renders the page subtitle as real DOM text', async () => {
+    render(
+      <MemoryRouter>
+        <GroupListPage />
+      </MemoryRouter>,
+    )
+    expect(
+      await screen.findByText('ภาพรวมยอดคงเหลือของคุณในแต่ละกลุ่ม'),
+    ).toBeInTheDocument()
+  })
+
   it('shows each group with the caller net position, green for owed and red for owing', async () => {
     render(
       <MemoryRouter>
@@ -83,10 +94,10 @@ describe('GroupListPage', () => {
     expect(await screen.findByText('Trip')).toBeInTheDocument()
     expect(screen.getByText('Flat')).toBeInTheDocument()
 
-    const owed = screen.getByText('you are owed ฿150.00')
+    const owed = screen.getByText('คุณควรได้รับคืน ฿150.00')
     expect(owed).toHaveClass('net-pos')
 
-    const owing = screen.getByText('you owe ฿40.00')
+    const owing = screen.getByText('คุณติดหนี้ ฿40.00')
     expect(owing).toHaveClass('net-neg')
   })
 })

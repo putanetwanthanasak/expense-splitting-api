@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../auth/auth-context'
+import { AuthBrandPanel } from '../components/AuthBrandPanel'
 import { ApiError } from '../lib/api'
 
 export function RegisterPage() {
@@ -28,7 +29,7 @@ export function RegisterPage() {
       setError(
         err instanceof ApiError
           ? err.detail
-          : 'Could not create your account. Please try again.',
+          : 'สร้างบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
       )
     } finally {
       setSubmitting(false)
@@ -36,57 +37,60 @@ export function RegisterPage() {
   }
 
   return (
-    <main className="auth-card">
-      <h1>Create an account</h1>
-      <form onSubmit={onSubmit} noValidate>
-        <label>
-          Name
-          <input
-            type="text"
-            name="name"
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
+    <>
+      <AuthBrandPanel />
+      <main className="auth-card">
+        <h1>สร้างบัญชีใหม่</h1>
+        <form onSubmit={onSubmit} noValidate>
+          <label>
+            ชื่อ
+            <input
+              type="text"
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            อีเมล
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            รหัสผ่าน
+            <input
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
 
-        {error !== null && (
-          <p role="alert" className="form-error">
-            {error}
-          </p>
-        )}
+          {error !== null && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Creating…' : 'Create account'}
-        </button>
-      </form>
-      <p>
-        Already have an account? <Link to="/login">Log in</Link>
-      </p>
-    </main>
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'กำลังสร้างบัญชี…' : 'สร้างบัญชี'}
+          </button>
+        </form>
+        <p>
+          มีบัญชีอยู่แล้ว? <Link to="/login">เข้าสู่ระบบ</Link>
+        </p>
+      </main>
+    </>
   )
 }

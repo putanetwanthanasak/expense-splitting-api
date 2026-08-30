@@ -38,12 +38,29 @@ describe('InvitationsPage', () => {
     vi.restoreAllMocks()
   })
 
+  it('renders the Thai subtitle only when there are invitations to show', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, ONE_INVITE)))
+    renderPage()
+    expect(
+      await screen.findByText('ยอมรับเพื่อเข้าร่วมกลุ่มและเริ่มแบ่งค่าใช้จ่าย'),
+    ).toBeInTheDocument()
+  })
+
+  it('omits the subtitle when there are no pending invitations', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, [])))
+    renderPage()
+    await screen.findByText('ไม่มีคำเชิญที่รอตอบรับ')
+    expect(
+      screen.queryByText('ยอมรับเพื่อเข้าร่วมกลุ่มและเริ่มแบ่งค่าใช้จ่าย'),
+    ).not.toBeInTheDocument()
+  })
+
   it('renders a calm empty state when there are no pending invitations', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, [])))
 
     renderPage()
 
-    expect(await screen.findByText('No pending invitations.')).toBeInTheDocument()
+    expect(await screen.findByText('ไม่มีคำเชิญที่รอตอบรับ')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -73,7 +90,7 @@ describe('InvitationsPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.click(screen.getByRole('button', { name: /accept/i }))
+    await user.click(screen.getByRole('button', { name: 'ยอมรับ' }))
 
     expect(await screen.findByText('Group g1 detail')).toBeInTheDocument()
     expect(screen.queryByText('Trip')).not.toBeInTheDocument()
@@ -97,9 +114,9 @@ describe('InvitationsPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.click(screen.getByRole('button', { name: /decline/i }))
+    await user.click(screen.getByRole('button', { name: 'ปฏิเสธ' }))
 
-    expect(await screen.findByText('No pending invitations.')).toBeInTheDocument()
+    expect(await screen.findByText('ไม่มีคำเชิญที่รอตอบรับ')).toBeInTheDocument()
     expect(screen.queryByText('Group g1 detail')).not.toBeInTheDocument()
   })
 })

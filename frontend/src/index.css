@@ -132,6 +132,14 @@ a {
   font-size: 1.1rem;
 }
 
+/* Sits directly under a page <h1> (Phase 17). Desktop tunes size/colour via
+   styles/desktop.css; this is the mobile baseline. */
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .button-link {
   padding: 0.4rem 0.7rem;
   border-radius: 0.375rem;

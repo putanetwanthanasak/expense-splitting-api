@@ -24,12 +24,12 @@ interface GroupRow {
 
 function NetPosition({ net }: { net: Money }) {
   if (net === ZERO) {
-    return <span className="net net-zero">settled up</span>
+    return <span className="net net-zero">ยอดครบแล้ว</span>
   }
   if (net > ZERO) {
-    return <span className="net net-pos">you are owed {formatMoney(net)}</span>
+    return <span className="net net-pos">คุณควรได้รับคืน {formatMoney(net)}</span>
   }
-  return <span className="net net-neg">you owe {formatMoney(negateMoney(net))}</span>
+  return <span className="net net-neg">คุณติดหนี้ {formatMoney(negateMoney(net))}</span>
 }
 
 export function GroupListPage() {
@@ -59,7 +59,7 @@ export function GroupListPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.detail : 'Could not load your groups.')
+          setError(err instanceof ApiError ? err.detail : 'โหลดรายการกลุ่มไม่สำเร็จ')
         }
       }
     }
@@ -78,18 +78,21 @@ export function GroupListPage() {
       setName('')
       setRefreshTick((n) => n + 1)
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Could not create the group.')
+      setError(err instanceof ApiError ? err.detail : 'สร้างกลุ่มไม่สำเร็จ')
     } finally {
       setCreating(false)
     }
   }
 
   return (
-    <main className="page">
+    <main className="page groups-page">
       <header className="page-head">
-        <h1>Your groups</h1>
+        <div className="page-head-titles">
+          <h1>กลุ่มของฉัน</h1>
+          <p className="page-subtitle">ภาพรวมยอดคงเหลือของคุณในแต่ละกลุ่ม</p>
+        </div>
         <button type="button" onClick={logout}>
-          Log out
+          ออกจากระบบ
         </button>
       </header>
 
@@ -101,21 +104,21 @@ export function GroupListPage() {
 
       <form className="inline-form" onSubmit={onCreate}>
         <input
-          aria-label="New group name"
-          placeholder="New group name"
+          aria-label="ชื่อกลุ่มใหม่"
+          placeholder="ชื่อกลุ่มใหม่"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <button type="submit" disabled={creating || name.trim() === ''}>
-          {creating ? 'Creating…' : 'Create group'}
+          {creating ? 'กำลังสร้าง…' : '+ กลุ่มใหม่'}
         </button>
       </form>
 
-      {rows === null && error === null && <p className="centered-status">Loading…</p>}
+      {rows === null && error === null && <p className="centered-status">กำลังโหลด…</p>}
 
       {rows !== null && rows.length === 0 && (
-        <p className="centered-status">No groups yet — create one above to get started.</p>
+        <p className="centered-status">ยังไม่มีกลุ่ม — สร้างกลุ่มจากด้านบนเพื่อเริ่มต้น</p>
       )}
 
       {rows !== null && rows.length > 0 && (

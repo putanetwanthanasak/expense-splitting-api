@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../auth/auth-context'
+import { AuthBrandPanel } from '../components/AuthBrandPanel'
 import { ApiError } from '../lib/api'
 
 interface FromState {
@@ -36,7 +37,7 @@ export function LoginPage() {
       setError(
         err instanceof ApiError
           ? err.detail
-          : 'Could not log in. Please try again.',
+          : 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
       )
     } finally {
       setSubmitting(false)
@@ -44,45 +45,48 @@ export function LoginPage() {
   }
 
   return (
-    <main className="auth-card">
-      <h1>Log in</h1>
-      <form onSubmit={onSubmit} noValidate>
-        <label>
-          Email
-          <input
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
+    <>
+      <AuthBrandPanel />
+      <main className="auth-card">
+        <h1>เข้าสู่ระบบ</h1>
+        <form onSubmit={onSubmit} noValidate>
+          <label>
+            อีเมล
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            รหัสผ่าน
+            <input
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
 
-        {error !== null && (
-          <p role="alert" className="form-error">
-            {error}
-          </p>
-        )}
+          {error !== null && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Logging in…' : 'Log in'}
-        </button>
-      </form>
-      <p>
-        No account? <Link to="/register">Register</Link>
-      </p>
-    </main>
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
+          </button>
+        </form>
+        <p>
+          ยังไม่มีบัญชี? <Link to="/register">สมัครสมาชิก</Link>
+        </p>
+      </main>
+    </>
   )
 }
