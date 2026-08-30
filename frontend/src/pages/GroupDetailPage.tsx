@@ -1,7 +1,8 @@
 /**
  * GroupDetailPage — one group: its members, its expenses, the way in to the
- * add-expense form, and inviting new members (SPEC §14, §7.1: "expenses,
- * members, add-expense action" plus Phase 14's invite-member form).
+ * add-expense form, inviting new members, editing/deleting expenses, and
+ * removing members (SPEC §14, §7.1, §9: "expenses, members, add-expense
+ * action" plus Phase 14's invite-member form and Phase 15's edit/delete).
  *
  * A non-member hitting this route gets a 403 from the API; per SPEC §10.2 that
  * shows an inline error and does NOT log the user out.
@@ -9,7 +10,13 @@
  * The member list includes PENDING rows now (§7.1) -- an invited member who
  * hasn't accepted yet -- shown with a de-emphasized "pending" tag. They can't
  * be an expense payer or participant per backend validation; that picker
- * (AddExpensePage) filters to ACTIVE only.
+ * (AddExpensePage) filters to ACTIVE only. Removing a PENDING member revokes
+ * their invitation (§7.1/§9) -- same endpoint, same "Remove" button.
+ *
+ * Expense delete and member removal both use the same inline two-step
+ * confirm pattern already established here for inviting a member: a
+ * "Confirm?" state in place of the single action button, never a native
+ * `window.confirm()`.
  */
 
 import { useEffect, useState } from 'react'
@@ -17,8 +24,9 @@ import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ApiError, expensesApi, groupsApi, usersApi } from '../lib/api'
-import type { Expense, GroupDetail, UserLookupOut } from '../lib/api'
-import { formatMoney, parseMoney } from '../lib/money'
+import type { Expense, GroupDetail, GroupMember, UserLookupOut } from '../lib/api'
+import { formatMoney, negateMoney, parseMoney } from '../lib/money'
+import type { Money } from '../lib/money'
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>()
@@ -34,6 +42,17 @@ export function GroupDetailPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteNotice, setInviteNotice] = useState<string | null>(null)
   const [inviteError, setInviteError] = useState<string | null>(null)
+
+  // --- remove member (§7.1, §9, Phase 15) ---------------------------------
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const [removeMemberPending, setRemoveMemberPending] = useState(false)
+  const [removeMemberNotice, setRemoveMemberNotice] = useState<string | null>(null)
+  const [removeMemberError, setRemoveMemberError] = useState<string | null>(null)
+
+  // --- delete expense (Phase 15) ------------------------------------------
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null)
+  const [deleteExpensePending, setDeleteExpensePending] = useState(false)
+  const [deleteExpenseError, setDeleteExpenseError] = useState<string | null>(null)
 
   useEffect(() => {
     const id = groupId
@@ -124,6 +143,74 @@ export function GroupDetailPage() {
     }
   }
 
+  function startRemoveMember(userId: string) {
+    setRemovingMemberId(userId)
+    setRemoveMemberNotice(null)
+    setRemoveMemberError(null)
+  }
+
+  function cancelRemoveMember() {
+    setRemovingMemberId(null)
+    setRemoveMemberNotice(null)
+    setRemoveMemberError(null)
+  }
+
+  async function confirmRemoveMember(member: GroupMember) {
+    if (!groupId) return
+    setRemoveMemberPending(true)
+    setRemoveMemberNotice(null)
+    setRemoveMemberError(null)
+    try {
+      await groupsApi.removeMember(groupId, member.user_id)
+      setGroup((g) =>
+        g ? { ...g, members: g.members.filter((m) => m.user_id !== member.user_id) } : g,
+      )
+      setRemovingMemberId(null)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const outstanding = extractOutstandingBalance(err.detail)
+        setRemoveMemberNotice(
+          outstanding !== null
+            ? `Cannot remove ${member.name} — they still have an outstanding balance of ` +
+                `${formatMoney(outstanding)}. Settle up first.`
+            : `Cannot remove ${member.name} — they still have an outstanding balance. Settle up first.`,
+        )
+      } else {
+        setRemoveMemberError(
+          err instanceof ApiError ? err.detail : 'Could not remove this member.',
+        )
+      }
+    } finally {
+      setRemoveMemberPending(false)
+    }
+  }
+
+  function startDeleteExpense(expenseId: string) {
+    setDeletingExpenseId(expenseId)
+    setDeleteExpenseError(null)
+  }
+
+  function cancelDeleteExpense() {
+    setDeletingExpenseId(null)
+    setDeleteExpenseError(null)
+  }
+
+  async function confirmDeleteExpense(expenseId: string) {
+    setDeleteExpensePending(true)
+    setDeleteExpenseError(null)
+    try {
+      await expensesApi.remove(expenseId)
+      setExpenses((prev) => (prev ? prev.filter((e) => e.id !== expenseId) : prev))
+      setDeletingExpenseId(null)
+    } catch (err) {
+      setDeleteExpenseError(
+        err instanceof ApiError ? err.detail : 'Could not delete this expense.',
+      )
+    } finally {
+      setDeleteExpensePending(false)
+    }
+  }
+
   return (
     <main className="page">
       <p>
@@ -166,11 +253,48 @@ export function GroupDetailPage() {
             <ul className="member-list">
               {group.members.map((m) => (
                 <li key={m.user_id}>
-                  {m.name} <span className="muted">({m.email})</span>
-                  {m.status === 'PENDING' && <span className="pending-tag">pending</span>}
+                  <span>
+                    {m.name} <span className="muted">({m.email})</span>
+                    {m.status === 'PENDING' && <span className="pending-tag">pending</span>}
+                  </span>
+                  {removingMemberId === m.user_id ? (
+                    <span className="confirm-inline">
+                      Remove {m.name}?
+                      <button
+                        type="button"
+                        onClick={() => confirmRemoveMember(m)}
+                        disabled={removeMemberPending}
+                      >
+                        {removeMemberPending ? 'Removing…' : 'Confirm'}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={cancelRemoveMember}
+                        disabled={removeMemberPending}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => startRemoveMember(m.user_id)}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
+
+            {removeMemberNotice !== null && <p className="notice">{removeMemberNotice}</p>}
+            {removeMemberError !== null && (
+              <p role="alert" className="form-error">
+                {removeMemberError}
+              </p>
+            )}
 
             <form className="inline-form invite-form" onSubmit={onLookupSubmit}>
               <input
@@ -232,6 +356,47 @@ export function GroupDetailPage() {
                       {formatMoney(parseMoney(e.amount))} · paid by{' '}
                       {nameOf(e.paid_by_user_id)} · {e.expense_date} · {e.split_type}
                     </span>
+                    <div className="expense-actions">
+                      <Link
+                        className="button-link secondary"
+                        to={`/groups/${group.id}/expenses/${e.id}/edit`}
+                      >
+                        Edit
+                      </Link>
+                      {deletingExpenseId === e.id ? (
+                        <span className="confirm-inline">
+                          Delete this expense?
+                          <button
+                            type="button"
+                            onClick={() => confirmDeleteExpense(e.id)}
+                            disabled={deleteExpensePending}
+                          >
+                            {deleteExpensePending ? 'Deleting…' : 'Confirm'}
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={cancelDeleteExpense}
+                            disabled={deleteExpensePending}
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => startDeleteExpense(e.id)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                    {deletingExpenseId === e.id && deleteExpenseError !== null && (
+                      <p role="alert" className="form-error">
+                        {deleteExpenseError}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -241,4 +406,34 @@ export function GroupDetailPage() {
       )}
     </main>
   )
+}
+
+/**
+ * DELETE /api/groups/{id}/members/{uid}'s 409 body is
+ * `{ detail: { message, outstanding_balance } }` -- `detail` isn't a plain
+ * string, so `api.ts`'s `readDetail` falls back to JSON-stringifying the
+ * whole response, and that's what ends up in `ApiError.detail` here. Parse
+ * it back out rather than showing raw JSON to the user; `null` if the shape
+ * doesn't match (a caller should fall back to a generic message).
+ */
+function extractOutstandingBalance(detailJson: string): Money | null {
+  try {
+    const parsed: unknown = JSON.parse(detailJson)
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      !('detail' in parsed) ||
+      parsed.detail === null ||
+      typeof parsed.detail !== 'object' ||
+      !('outstanding_balance' in parsed.detail) ||
+      typeof (parsed.detail as { outstanding_balance: unknown }).outstanding_balance !== 'string'
+    ) {
+      return null
+    }
+    const raw = (parsed.detail as { outstanding_balance: string }).outstanding_balance
+    const cents = parseMoney(raw)
+    return cents < 0 ? negateMoney(cents) : cents
+  } catch {
+    return null
+  }
 }

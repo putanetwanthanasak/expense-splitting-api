@@ -1,7 +1,10 @@
 /**
  * AddExpensePage — record an expense, with the form reshaping itself around the
  * chosen split type (SPEC §14.1) and a live preview of the resulting split
- * before anything is saved (SPEC §14.2).
+ * before anything is saved (SPEC §14.2). Also does double duty as the edit
+ * form (Phase 15): when the route carries an `expenseId`, the same form is
+ * pre-filled from GET /api/expenses/:id and submits a PATCH instead of a
+ * POST, with identical validation and preview either way.
  *
  *   EQUAL      → tick participants
  *   EXACT      → an amount per participant + a running total that must equal the
@@ -20,10 +23,11 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { ApiError, expensesApi, groupsApi } from '../lib/api'
-import type { ExpenseCreateBody, GroupMember, SplitType } from '../lib/api'
+import type { ExpenseCreateBody, ExpenseSplit, GroupMember, SplitType } from '../lib/api'
 import { formatMoney, parseMoney, sumMoney, toApiString, ZERO } from '../lib/money'
 import type { Money } from '../lib/money'
 import {
+  HUNDRED_PERCENT,
   parsePercent,
   parseShareCount,
   splitByPercentage,
@@ -57,8 +61,9 @@ interface Preview {
 const EMPTY_PREVIEW: Preview = { result: null, hint: null, runningTotal: null }
 
 export function AddExpensePage() {
-  const { groupId } = useParams<{ groupId: string }>()
+  const { groupId, expenseId } = useParams<{ groupId: string; expenseId?: string }>()
   const navigate = useNavigate()
+  const isEditing = expenseId !== undefined
 
   const [members, setMembers] = useState<GroupMember[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -79,33 +84,63 @@ export function AddExpensePage() {
     if (!id) return
     let cancelled = false
 
-    groupsApi
-      .get(id)
-      .then((detail) => {
-        if (cancelled) return
-        // Only ACTIVE members can be a payer or participant (§7.1) -- a
-        // PENDING invitee isn't a member yet and the backend rejects their id
-        // as either with a 400, so they never appear in this picker.
-        const active = detail.members.filter((m) => m.status === 'ACTIVE')
-        setMembers(active)
+    const load = async () => {
+      const [detail, expense] = await Promise.all([
+        groupsApi.get(id),
+        expenseId ? expensesApi.get(expenseId) : Promise.resolve(null),
+      ])
+      if (cancelled) return
+
+      // Only ACTIVE members can be a payer or participant (§7.1) -- a
+      // PENDING invitee isn't a member yet and the backend rejects their id
+      // as either with a 400, so they never appear in this picker.
+      const active = detail.members.filter((m) => m.status === 'ACTIVE')
+      setMembers(active)
+
+      if (expense === null) {
         setSelected(Object.fromEntries(active.map((m) => [m.user_id, true] as const)))
         setPaidBy(active[0]?.user_id ?? '')
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        setLoadError(
-          err instanceof ApiError
-            ? err.status === 403
-              ? "You don't have access to this group."
-              : err.detail
+        return
+      }
+
+      // Pre-fill from the existing expense (edit mode).
+      setDescription(expense.description)
+      setAmountText(expense.amount)
+      setDateText(expense.expense_date)
+      setPaidBy(expense.paid_by_user_id)
+      setSplitType(expense.split_type)
+
+      const splitUserIds = new Set(expense.splits.map((s) => s.user_id))
+      setSelected(
+        Object.fromEntries(active.map((m) => [m.user_id, splitUserIds.has(m.user_id)] as const)),
+      )
+
+      if (expense.split_type === 'EXACT') {
+        setValues(exactValuesFromSplits(expense.splits))
+      } else if (expense.split_type === 'PERCENTAGE') {
+        setValues(percentValuesFromSplits(expense.splits, parseMoney(expense.amount)))
+      } else if (expense.split_type === 'SHARES') {
+        setValues(shareValuesFromSplits(expense.splits))
+      }
+    }
+
+    load().catch((err: unknown) => {
+      if (cancelled) return
+      setLoadError(
+        err instanceof ApiError
+          ? err.status === 403
+            ? "You don't have access to this group."
+            : err.detail
+          : expenseId
+            ? 'Could not load this expense.'
             : 'Could not load this group.',
-        )
-      })
+      )
+    })
 
     return () => {
       cancelled = true
     }
-  }, [groupId])
+  }, [groupId, expenseId])
 
   const nameOf = (userId: string): string =>
     members?.find((m) => m.user_id === userId)?.name ?? 'Unknown'
@@ -267,7 +302,11 @@ export function AddExpensePage() {
     }
 
     try {
-      await expensesApi.create(groupId, body)
+      if (isEditing && expenseId) {
+        await expensesApi.update(expenseId, body)
+      } else {
+        await expensesApi.create(groupId, body)
+      }
       navigate(`/groups/${groupId}`, { replace: true })
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.detail : 'Could not save the expense.')
@@ -301,7 +340,7 @@ export function AddExpensePage() {
       <p>
         <Link to={`/groups/${groupId}`}>← Back to group</Link>
       </p>
-      <h1>Add expense</h1>
+      <h1>{isEditing ? 'Edit expense' : 'Add expense'}</h1>
 
       <form className="expense-form" onSubmit={onSubmit} noValidate>
         <label>
@@ -442,7 +481,7 @@ export function AddExpensePage() {
         )}
 
         <button type="submit" disabled={!canSubmit}>
-          {submitting ? 'Saving…' : 'Save expense'}
+          {submitting ? 'Saving…' : isEditing ? 'Save changes' : 'Save expense'}
         </button>
       </form>
     </main>
@@ -476,4 +515,60 @@ function tryParseEach<T>(
     }
   }
   return out
+}
+
+// --- Edit mode: reconstruct per-split-type inputs from a saved expense ----
+//
+// GET /api/expenses/:id only ever returns each split's `amount_owed` — the
+// backend never stores the percentages or share counts a group originally
+// typed (§9: a PATCH deletes and recomputes every split from scratch). These
+// three helpers turn that `amount_owed` list back into the per-participant
+// text inputs this form edits, close enough to reproduce the same split by
+// default; the user can still change any of them before saving.
+
+/** EXACT: `amount_owed` *is* the amount, verbatim. */
+function exactValuesFromSplits(splits: readonly ExpenseSplit[]): Record<string, string> {
+  return Object.fromEntries(splits.map((s) => [s.user_id, s.amount_owed]))
+}
+
+/**
+ * SHARES: each split's amount-owed cents, used directly as the share weight,
+ * reproduces the exact original split with zero remainder — every
+ * `amount_owed` already sums to the expense total, so
+ * `floor(total * amount_i / total) === amount_i` for each participant. Not
+ * the share counts the group actually typed (never stored), but a share
+ * input that recreates the same split.
+ */
+function shareValuesFromSplits(splits: readonly ExpenseSplit[]): Record<string, string> {
+  return Object.fromEntries(splits.map((s) => [s.user_id, `${parseMoney(s.amount_owed)}`]))
+}
+
+/**
+ * PERCENTAGE: each participant's percentage is derived from their share of
+ * the total, floored to hundredths of a percent, with the leftover
+ * hundredths handed to the first participants in split order — the same
+ * largest-remainder shape `split.ts` itself uses — so the reconstructed
+ * percentages always sum to exactly 100, never drift from rounding.
+ */
+function percentValuesFromSplits(
+  splits: readonly ExpenseSplit[],
+  total: Money,
+): Record<string, string> {
+  const order = splits.map((s) => s.user_id)
+  const floored = new Map<string, number>(
+    splits.map((s) => {
+      const cents = parseMoney(s.amount_owed)
+      return [s.user_id, Math.floor((cents * HUNDRED_PERCENT) / total)] as const
+    }),
+  )
+  let assigned = 0
+  for (const v of floored.values()) assigned += v
+  const leftover = HUNDRED_PERCENT - assigned
+
+  const values: Record<string, string> = {}
+  order.forEach((id, index) => {
+    const percent = ((floored.get(id) ?? 0) + (index < leftover ? 1 : 0)) as Percent
+    values[id] = toPercentApiString(percent)
+  })
+  return values
 }
