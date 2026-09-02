@@ -201,7 +201,22 @@ a {
   border-radius: 0.5rem;
 }
 
+/* Balance status: a small Thai label above the ฿ amount (two elements, not
+   one combined span). The wrapper carries the .net-pos/.net-neg/.net-zero
+   colour; both children inherit it. */
 .net {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.net-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.net-amount {
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }

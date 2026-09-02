@@ -414,12 +414,29 @@
     color: var(--ds-color-text);
     text-decoration: none;
   }
-  /* Balance status — restyle of the page's own output, colours per Figma
-     (owed 9:32 / owe 9:39 / settled 9:44). The +/- logic is untouched. */
+  /* Balance status — a small Thai label stacked above the large numeric
+     amount (Figma models these as separate nodes: label 9:30, amount 9:32).
+     Was one combined .net span that forced the Thai label through the numeral
+     font. The +/- logic and the .net-pos/.net-neg/.net-zero colours below are
+     untouched — the wrapper still carries the state class and both children
+     inherit its colour. */
   .app-shell .groups-page .group-list .net {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* card is left-aligned (Figma 9:26); override the
+                                mobile .net right-alignment */
+    gap: 2px;
+  }
+  .app-shell .groups-page .group-list .net-label {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-label);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .groups-page .group-list .net-amount {
     font-family: var(--ds-font-numeric);
     font-size: var(--ds-size-amount);
     font-weight: var(--ds-weight-bold);
+    font-variant-numeric: tabular-nums;
   }
   .app-shell .groups-page .group-list .net-pos {
     color: var(--ds-color-brand);
