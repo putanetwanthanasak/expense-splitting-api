@@ -27,7 +27,15 @@ export interface BalanceLine {
 
 export interface ViewerBalanceSummary {
   standing: ViewerStanding
-  headline: string
+  /**
+   * The Thai lead-in of the headline, e.g. "คุณควรได้รับคืน" — or, when the
+   * viewer is settled, the whole sentence. Kept separate from the amount so the
+   * page can render each in its own face: Thai text never goes through the
+   * numeral font (`--ds-font-numeric`).
+   */
+  headlineLabel: string
+  /** The headline ฿ amount, already formatted; `null` when the viewer is settled. */
+  headlineAmount: string | null
   lines: BalanceLine[]
 }
 
@@ -42,14 +50,20 @@ export function describeViewerBalance(args: {
   const { viewerId, net, transfers, nameOf } = args
 
   if (net === ZERO) {
-    return { standing: 'settled', headline: 'คุณไม่มียอดค้างในกลุ่มนี้', lines: [] }
+    return {
+      standing: 'settled',
+      headlineLabel: 'คุณไม่มียอดค้างในกลุ่มนี้',
+      headlineAmount: null,
+      lines: [],
+    }
   }
 
   if (net > ZERO) {
     const incoming = transfers.filter((t) => t.to_user_id === viewerId)
     return {
       standing: 'creditor',
-      headline: `คุณควรได้รับคืน ${formatMoney(net)}`,
+      headlineLabel: 'คุณควรได้รับคืน',
+      headlineAmount: formatMoney(net),
       lines: incoming.map((t) => ({
         userId: t.from_user_id,
         text: `${nameOf(t.from_user_id)} ควรจ่ายคุณ ${formatMoney(parseMoney(t.amount))}`,
@@ -60,7 +74,8 @@ export function describeViewerBalance(args: {
   const outgoing = transfers.filter((t) => t.from_user_id === viewerId)
   return {
     standing: 'debtor',
-    headline: `คุณค้างชำระ ${formatMoney(negateMoney(net))}`,
+    headlineLabel: 'คุณค้างชำระ',
+    headlineAmount: formatMoney(negateMoney(net)),
     lines: outgoing.map((t) => ({
       userId: t.to_user_id,
       text: `คุณควรจ่าย ${nameOf(t.to_user_id)} ${formatMoney(parseMoney(t.amount))}`,

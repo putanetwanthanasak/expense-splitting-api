@@ -137,7 +137,10 @@ function Summary({
                 : 'balance-headline net-zero'
           }
         >
-          {summary.headline}
+          <span className="balance-headline-label">{summary.headlineLabel}</span>
+          {summary.headlineAmount !== null && (
+            <span className="balance-headline-amount">{summary.headlineAmount}</span>
+          )}
         </p>
         {summary.lines.length > 0 && (
           <ul className="balance-tree">

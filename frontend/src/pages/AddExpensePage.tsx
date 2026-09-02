@@ -474,9 +474,10 @@ export function AddExpensePage() {
                 const getsExtra = preview.result?.remainderRecipients.includes(id) ?? false
                 return (
                   <li key={id}>
-                    {nameOf(id)}: {formatMoney(share)}
+                    <span className="preview-name">{nameOf(id)}</span>
+                    <span className="preview-amount">{formatMoney(share)}</span>
                     {getsExtra && (
-                      <span className="remainder"> (+{formatMoney(ONE_CENT)} เศษสตางค์)</span>
+                      <span className="remainder">+{formatMoney(ONE_CENT)} เศษสตางค์</span>
                     )}
                   </li>
                 )
