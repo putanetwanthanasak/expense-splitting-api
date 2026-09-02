@@ -360,6 +360,18 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+/* Name span + amount span (two elements, not one "{name}: {amount}" string). */
+.preview li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.preview-amount {
+  margin-left: auto;
+}
+
 .remainder {
   color: var(--pos);
   font-weight: 600;
@@ -405,8 +417,13 @@ a {
   padding: 1rem;
 }
 
+/* Label span + amount span (two elements, not one combined sentence). */
 .balance-headline {
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
   font-size: 1.15rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

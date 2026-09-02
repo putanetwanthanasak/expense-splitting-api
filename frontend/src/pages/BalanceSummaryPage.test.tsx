@@ -111,8 +111,12 @@ describe('BalanceSummaryPage', () => {
     )
     renderPage()
 
-    const headline = await screen.findByText('คุณควรได้รับคืน ฿250.00')
-    const summarySection = headline.closest('.balance-summary')
+    // Headline is a Thai label span + a numeral amount span, not one string.
+    const headlineLabel = await screen.findByText('คุณควรได้รับคืน')
+    expect(headlineLabel).toHaveClass('balance-headline-label')
+    const headlineAmount = screen.getByText('฿250.00')
+    expect(headlineAmount).toHaveClass('balance-headline-amount')
+    const summarySection = headlineLabel.closest('.balance-summary')
     expect(summarySection).not.toBeNull()
     expect(summarySection).toHaveTextContent('├─สมชาย ควรจ่ายคุณ ฿150.00')
     expect(summarySection).toHaveTextContent('└─สมหญิง ควรจ่ายคุณ ฿100.00')

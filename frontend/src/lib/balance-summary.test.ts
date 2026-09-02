@@ -26,7 +26,8 @@ describe('describeViewerBalance', () => {
     })
 
     expect(summary.standing).toBe('creditor')
-    expect(summary.headline).toBe('คุณควรได้รับคืน ฿250.00')
+    expect(summary.headlineLabel).toBe('คุณควรได้รับคืน')
+    expect(summary.headlineAmount).toBe('฿250.00')
     expect(summary.lines.map((l) => l.text)).toEqual([
       'สมชาย ควรจ่ายคุณ ฿150.00',
       'สมหญิง ควรจ่ายคุณ ฿100.00',
@@ -46,7 +47,8 @@ describe('describeViewerBalance', () => {
     })
 
     expect(summary.standing).toBe('debtor')
-    expect(summary.headline).toBe('คุณค้างชำระ ฿80.00')
+    expect(summary.headlineLabel).toBe('คุณค้างชำระ')
+    expect(summary.headlineAmount).toBe('฿80.00')
     expect(summary.lines).toEqual([{ userId: 'somchai', text: 'คุณควรจ่าย สมชาย ฿80.00' }])
   })
 
@@ -75,7 +77,8 @@ describe('describeViewerBalance', () => {
     })
 
     expect(summary.standing).toBe('settled')
-    expect(summary.headline).toBe('คุณไม่มียอดค้างในกลุ่มนี้')
+    expect(summary.headlineLabel).toBe('คุณไม่มียอดค้างในกลุ่มนี้')
+    expect(summary.headlineAmount).toBeNull()
     expect(summary.lines).toEqual([])
   })
 })

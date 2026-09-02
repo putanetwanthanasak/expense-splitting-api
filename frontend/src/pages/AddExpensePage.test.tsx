@@ -126,10 +126,15 @@ describe('AddExpensePage', () => {
 
     const preview = screen.getByRole('heading', { name: 'ตัวอย่างการแบ่ง' }).closest('.preview')
     expect(preview).not.toBeNull()
-    expect(preview).toHaveTextContent('Alice: ฿33.34')
-    expect(preview).toHaveTextContent('(+฿0.01 เศษสตางค์)')
-    expect(preview).toHaveTextContent('Bob: ฿33.33')
-    expect(preview).toHaveTextContent('Carol: ฿33.33')
+    // name and amount are two separate spans (Thai name / numeral amount), not
+    // one "Alice: ฿33.34" string.
+    const p = within(preview as HTMLElement)
+    expect(p.getByText('Alice')).toHaveClass('preview-name')
+    expect(p.getByText('฿33.34')).toHaveClass('preview-amount')
+    expect(p.getByText('+฿0.01 เศษสตางค์')).toHaveClass('remainder')
+    expect(p.getByText('Bob')).toHaveClass('preview-name')
+    expect(p.getByText('Carol')).toHaveClass('preview-name')
+    expect(p.getAllByText('฿33.33')).toHaveLength(2)
 
     expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
   })
@@ -179,9 +184,10 @@ describe('AddExpensePage', () => {
     // Live preview: 2:1:1 of ฿100.00 -> largest-remainder ฿50 / ฿25 / ฿25, no odd cent.
     const preview = screen.getByRole('heading', { name: 'ตัวอย่างการแบ่ง' }).closest('.preview')
     expect(preview).not.toBeNull()
-    expect(preview).toHaveTextContent('Alice: ฿50.00')
-    expect(preview).toHaveTextContent('Bob: ฿25.00')
-    expect(preview).toHaveTextContent('Carol: ฿25.00')
+    const p = within(preview as HTMLElement)
+    expect(p.getByText('Alice')).toHaveClass('preview-name')
+    expect(p.getByText('฿50.00')).toHaveClass('preview-amount')
+    expect(p.getAllByText('฿25.00')).toHaveLength(2)
     expect(preview).not.toHaveTextContent('เศษสตางค์')
     expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
 
