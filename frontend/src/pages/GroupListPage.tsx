@@ -23,13 +23,26 @@ interface GroupRow {
 }
 
 function NetPosition({ net }: { net: Money }) {
+  // The Thai status word and the ฿ amount are two separate elements: the label
+  // rides the Thai font at a small size, the amount stays on the numeral font
+  // (Inter, bold, tabular) — see the .net-label / .net-amount rules in
+  // index.css and desktop.css. Figma models these as separate nodes too.
   if (net === ZERO) {
-    return <span className="net net-zero">ยอดครบแล้ว</span>
+    return (
+      <span className="net net-zero">
+        <span className="net-label">ยอดครบแล้ว</span>
+      </span>
+    )
   }
-  if (net > ZERO) {
-    return <span className="net net-pos">คุณควรได้รับคืน {formatMoney(net)}</span>
-  }
-  return <span className="net net-neg">คุณติดหนี้ {formatMoney(negateMoney(net))}</span>
+  const owed = net > ZERO
+  return (
+    <span className={`net ${owed ? 'net-pos' : 'net-neg'}`}>
+      <span className="net-label">{owed ? 'คุณควรได้รับคืน' : 'คุณติดหนี้'}</span>
+      <span className="net-amount">
+        {formatMoney(owed ? net : negateMoney(net))}
+      </span>
+    </span>
+  )
 }
 
 export function GroupListPage() {

@@ -414,12 +414,29 @@
     color: var(--ds-color-text);
     text-decoration: none;
   }
-  /* Balance status — restyle of the page's own output, colours per Figma
-     (owed 9:32 / owe 9:39 / settled 9:44). The +/- logic is untouched. */
+  /* Balance status — a small Thai label stacked above the large numeric
+     amount (Figma models these as separate nodes: label 9:30, amount 9:32).
+     Was one combined .net span that forced the Thai label through the numeral
+     font. The +/- logic and the .net-pos/.net-neg/.net-zero colours below are
+     untouched — the wrapper still carries the state class and both children
+     inherit its colour. */
   .app-shell .groups-page .group-list .net {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* card is left-aligned (Figma 9:26); override the
+                                mobile .net right-alignment */
+    gap: 2px;
+  }
+  .app-shell .groups-page .group-list .net-label {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-label);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .groups-page .group-list .net-amount {
     font-family: var(--ds-font-numeric);
     font-size: var(--ds-size-amount);
     font-weight: var(--ds-weight-bold);
+    font-variant-numeric: tabular-nums;
   }
   .app-shell .groups-page .group-list .net-pos {
     color: var(--ds-color-brand);
@@ -798,21 +815,34 @@
   }
   .app-shell .add-expense-page .preview ul {
     gap: 8px;
-    font-family: var(--ds-font-numeric);
     font-size: var(--ds-size-body);
   }
+  /* Each row is a Thai name + the numeral amount as two separate spans (Figma
+     13:136 / 13:138) — the numeral font stays on the amount only, never on the
+     Thai name. */
   .app-shell .add-expense-page .preview li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--ds-color-row-line);
     color: var(--ds-color-text);
   }
+  .app-shell .add-expense-page .preview-name {
+    font-family: var(--ds-font-thai);
+  }
+  .app-shell .add-expense-page .preview-amount {
+    margin-left: auto;
+    font-family: var(--ds-font-numeric);
+    font-variant-numeric: tabular-nums;
+  }
   /* Remainder marker — friendly green pill (Tag/Remainder 6:10), never an error colour */
   .app-shell .add-expense-page .remainder {
-    margin-left: 8px;
     padding: 2px 8px;
     border-radius: var(--ds-radius-pill);
     background: var(--ds-color-brand-wash-soft);
     color: var(--ds-color-brand);
+    font-family: var(--ds-font-thai);
     font-size: 11px;
     font-weight: var(--ds-weight-semibold);
   }
@@ -847,10 +877,26 @@
     border-radius: var(--ds-radius-card);
     background: var(--ds-color-brand-wash);
   }
+  /* Thai lead-in + the big numeral amount as two separate spans (Figma 13:169 /
+     13:170) — the numeral font stays on the amount only, never on the Thai
+     label. The .net-pos/.net-neg/.net-zero colour on the wrapper is inherited
+     by both spans. */
   .app-shell .balance-summary-page .balance-headline {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .app-shell .balance-summary-page .balance-headline-label {
+    font-family: var(--ds-font-thai);
+    font-size: var(--ds-size-section);
+    font-weight: var(--ds-weight-semibold);
+  }
+  .app-shell .balance-summary-page .balance-headline-amount {
     font-family: var(--ds-font-numeric);
     font-size: var(--ds-size-headline);
     font-weight: var(--ds-weight-bold);
+    font-variant-numeric: tabular-nums;
   }
   .app-shell .balance-summary-page .balance-headline.net-pos {
     color: var(--ds-color-brand);

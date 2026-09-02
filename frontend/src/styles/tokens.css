@@ -153,7 +153,7 @@
   --ds-size-card-title: 19px; /* GroupCard name 9:28 (was 17) */
   --ds-size-invite-title: 18px; /* InvitationCard name 10:39 (was 16) */
   --ds-size-body: 16px; /* page subtitle 9:22; input text 7:13 (was 14) */
-  --ds-size-label: 15px; /* field label 7:11; card meta 10:40; auth link 7:23 (was 13) */
+  --ds-size-label: 15px; /* field label 7:11; card meta 10:40; auth link 7:23; Groups card status label 9:30 (was 13) */
   --ds-size-btn: 17px; /* auth submit label 7:22 (was 15) */
   --ds-size-btn-sm: 15px; /* invitation button label 10:43 (was 13) */
 
