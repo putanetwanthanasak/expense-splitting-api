@@ -94,10 +94,21 @@ describe('GroupListPage', () => {
     expect(await screen.findByText('Trip')).toBeInTheDocument()
     expect(screen.getByText('Flat')).toBeInTheDocument()
 
-    const owed = screen.getByText('คุณควรได้รับคืน ฿150.00')
-    expect(owed).toHaveClass('net-pos')
+    // g1: caller is owed +150 — label and amount are two separate elements
+    // inside one green .net-pos wrapper.
+    const owedLabel = screen.getByText('คุณควรได้รับคืน')
+    const owedAmount = screen.getByText('฿150.00')
+    expect(owedLabel).toHaveClass('net-label')
+    expect(owedAmount).toHaveClass('net-amount')
+    expect(owedLabel.closest('.net')).toHaveClass('net-pos')
+    expect(owedAmount.closest('.net')).toHaveClass('net-pos')
 
-    const owing = screen.getByText('คุณติดหนี้ ฿40.00')
-    expect(owing).toHaveClass('net-neg')
+    // g2: caller owes -40 — amount is shown as the positive magnitude.
+    const owingLabel = screen.getByText('คุณติดหนี้')
+    const owingAmount = screen.getByText('฿40.00')
+    expect(owingLabel).toHaveClass('net-label')
+    expect(owingAmount).toHaveClass('net-amount')
+    expect(owingLabel.closest('.net')).toHaveClass('net-neg')
+    expect(owingAmount.closest('.net')).toHaveClass('net-neg')
   })
 })
