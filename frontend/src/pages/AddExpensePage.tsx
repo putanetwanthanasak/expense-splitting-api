@@ -359,7 +359,9 @@ export function AddExpensePage() {
       <p>
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
-      <h1>{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใช้จ่าย'}</h1>
+      <header className="page-head">
+        <h1>{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใช้จ่าย'}</h1>
+      </header>
 
       <form className="expense-form" onSubmit={onSubmit} noValidate>
         <label>

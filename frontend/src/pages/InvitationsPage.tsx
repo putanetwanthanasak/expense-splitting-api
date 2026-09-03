@@ -104,11 +104,16 @@ export function InvitationsPage() {
 
   return (
     <main className="page invitations-page">
-      <h1>คำเชิญเข้าร่วมกลุ่ม</h1>
-
-      {invitations !== null && invitations.length > 0 && (
-        <p className="page-subtitle">ยอมรับเพื่อเข้าร่วมกลุ่มและเริ่มแบ่งค่าใช้จ่าย</p>
-      )}
+      <header className="page-head">
+        <div className="page-head-titles">
+          <h1>คำเชิญเข้าร่วมกลุ่ม</h1>
+          {invitations !== null && invitations.length > 0 && (
+            <p className="page-subtitle">
+              ยอมรับเพื่อเข้าร่วมกลุ่มและเริ่มแบ่งค่าใช้จ่าย
+            </p>
+          )}
+        </div>
+      </header>
 
       {loadError !== null && (
         <p role="alert" className="form-error">

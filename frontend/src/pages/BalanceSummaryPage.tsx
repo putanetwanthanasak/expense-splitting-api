@@ -73,7 +73,9 @@ export function BalanceSummaryPage() {
       <p>
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
-      <h1>ยอดคงเหลือ</h1>
+      <header className="page-head">
+        <h1>ยอดคงเหลือ</h1>
+      </header>
 
       {error !== null && (
         <p role="alert" className="form-error">
