@@ -242,7 +242,16 @@ export function GroupDetailPage() {
       {group !== null && (
         <>
           <header className="page-head">
-            <h1>{group.name}</h1>
+            <div className="page-head-titles">
+              <h1>{group.name}</h1>
+              {/* Figma 2:1210 (§J, mobile-rollout backlog): "N members · updated
+                  today". GroupDetail has no last-updated timestamp anywhere in
+                  the API (Group/GroupDetail only carry created_at), so that
+                  clause is dropped rather than fabricated — just the count,
+                  which matches the member list below (PENDING invitees
+                  included, same as `.member-list` already shows them). */}
+              <p className="page-subtitle">{group.members.length} สมาชิก</p>
+            </div>
             <nav className="page-actions">
               <Link className="button-link" to={`/groups/${group.id}/expenses/new`}>
                 + เพิ่มค่าใช้จ่าย
@@ -267,11 +276,26 @@ export function GroupDetailPage() {
             <ul className="member-list">
               {group.members.map((m) => (
                 <li key={m.user_id}>
-                  <span>
-                    {m.name} <span className="muted">({m.email})</span>
-                    {m.status === 'PENDING' && (
-                      <span className="pending-tag">รอการยอมรับ</span>
-                    )}
+                  <span className="member-row">
+                    {/* Figma 2:1221/2:1224/2:1227 (§J): flat colored circle,
+                        no initials/photo — verified via the plugin API this
+                        isn't per-member random colour, it's status-driven:
+                        ACTIVE members get the brand-wash fill, the one
+                        PENDING row in the mock gets the border-grey fill. */}
+                    <span
+                      className={
+                        m.status === 'PENDING'
+                          ? 'member-avatar member-avatar-pending'
+                          : 'member-avatar'
+                      }
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {m.name} <span className="muted">({m.email})</span>
+                      {m.status === 'PENDING' && (
+                        <span className="pending-tag">รอการยอมรับ</span>
+                      )}
+                    </span>
                   </span>
                   {removingMemberId === m.user_id ? (
                     <span className="confirm-inline">
@@ -312,27 +336,48 @@ export function GroupDetailPage() {
               </p>
             )}
 
-            <form className="inline-form invite-form" onSubmit={onLookupSubmit}>
-              <input
-                type="email"
-                aria-label="อีเมลที่ต้องการเชิญ"
-                placeholder="เชิญสมาชิกด้วยอีเมล"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-              />
-              <button type="submit" disabled={lookingUp || inviteEmail.trim() === ''}>
-                {lookingUp ? 'กำลังค้นหา…' : '+ เชิญสมาชิก'}
-              </button>
-            </form>
+            {/* Figma 2:1231 (§J): the "Invite member" card wrapper — reuses
+                .new-group-card/.new-group-form/.new-group-label byte-for-byte
+                (GroupListPage's "สร้างกลุ่มใหม่" card, PR #29), not a new
+                pattern. Neutralized on desktop the same way that card is on
+                the Groups page (styles/desktop.css): this section already
+                sits on its own white panel there. */}
+            <div className="new-group-card">
+              <h2>เชิญสมาชิก</h2>
+              <form className="inline-form new-group-form invite-form" onSubmit={onLookupSubmit}>
+                <label htmlFor="invite-email" className="new-group-label">
+                  อีเมล
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  placeholder="เชิญสมาชิกด้วยอีเมล"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                />
+                <button type="submit" disabled={lookingUp || inviteEmail.trim() === ''}>
+                  {lookingUp ? 'กำลังค้นหา…' : '+ เชิญสมาชิก'}
+                </button>
+              </form>
 
-            {lookupNotice !== null && <p className="notice">{lookupNotice}</p>}
-            {inviteNotice !== null && <p className="notice">{inviteNotice}</p>}
-            {inviteError !== null && (
-              <p role="alert" className="form-error">
-                {inviteError}
-              </p>
-            )}
+              {/* Figma 2:1237 "✓ Found: Praew S." — a lightweight match
+                  indicator, additive to (not a replacement for) the existing
+                  two-step lookup→confirm safety check below; §J has no
+                  counterpart for the confirm/cancel box itself, so that part
+                  is untouched. */}
+              {lookupResult !== null && (
+                <p className="invite-match">✓ พบ: {lookupResult.name}</p>
+              )}
+
+              {lookupNotice !== null && <p className="notice">{lookupNotice}</p>}
+              {inviteNotice !== null && <p className="notice">{inviteNotice}</p>}
+              {inviteError !== null && (
+                <p role="alert" className="form-error">
+                  {inviteError}
+                </p>
+              )}
+            </div>
 
             {lookupResult !== null && (
               <div className="invite-confirm">

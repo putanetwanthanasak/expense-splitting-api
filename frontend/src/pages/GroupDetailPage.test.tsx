@@ -119,7 +119,7 @@ describe('GroupDetailPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.type(screen.getByLabelText('อีเมลที่ต้องการเชิญ'), 'nobody@example.com')
+    await user.type(screen.getByLabelText('อีเมล'), 'nobody@example.com')
     await user.click(screen.getByRole('button', { name: /เชิญสมาชิก/ }))
 
     const notice = await screen.findByText('ไม่พบบัญชีที่ใช้อีเมลนี้')
@@ -150,7 +150,7 @@ describe('GroupDetailPage', () => {
     renderPage()
 
     await screen.findByText('Trip')
-    await user.type(screen.getByLabelText('อีเมลที่ต้องการเชิญ'), 'jane@example.com')
+    await user.type(screen.getByLabelText('อีเมล'), 'jane@example.com')
     await user.click(screen.getByRole('button', { name: /เชิญสมาชิก/ }))
 
     // Lookup happened; confirmation is shown; the invite POST has NOT fired yet.

@@ -114,9 +114,18 @@ a {
    --bg (= ds/color/surface) background from the Phase 19 palette migration —
    scoped to just these 2 routes since only they were verified against
    Figma this pass. Targets <body>, not .page, so the canvas colour reaches
-   into body's own padding too, not just the .page column. */
+   into body's own padding too, not just the .page column.
+
+   Group Detail 2:1200 joins the same treatment below (§ Group Detail
+   closeout, mobile-rollout backlog): its own card fills — .expense-list li,
+   .new-group-card, .invite-confirm — matched the identical canvas/surface
+   pair, verified via the plugin API (same #f4f7f6 frame fill, same
+   DROP_SHADOW on every card). Desktop is unaffected for the same reason PR
+   #29 already established: at >=1024px <Sidebar> + .app-shell together cover
+   the full viewport, so body's background never paints on screen there. */
 body:has(.groups-page),
-body:has(.invitations-page) {
+body:has(.invitations-page),
+body:has(.group-detail-page) {
   background: var(--ds-color-canvas);
 }
 
@@ -281,12 +290,19 @@ body:has(.invitations-page) {
   color: var(--muted);
 }
 
+/* Figma 2:1247/2:1253 (§ Group Detail closeout): same surface + drop-shadow
+   card treatment as .group-list li / .invitation-row (PR #29) — byte-
+   identical DROP_SHADOW, verified via the plugin API. Desktop resets both
+   back to none (styles/desktop.css): its own Phase 18 design is a single
+   bordered-row list inside ONE white section card, not per-row cards. */
 .expense-list li {
   display: flex;
   flex-direction: column;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 .expense-desc {
@@ -459,6 +475,21 @@ body:has(.invitations-page) {
   border: 1px solid var(--border);
 }
 
+/* Figma 2:1200 (§ Group Detail closeout, mobile-rollout backlog): all 3
+   header action pills (2:1212/2:1214/2:1216 — Add expense/Balances/Settle
+   up) share ONE pale-wash fill, #e7f3ef = ds/color/brand-wash exact, not the
+   solid-primary + outline-secondary split .button-link/.button-link.secondary
+   draw elsewhere. Scoped to .group-detail-page .page-actions so the
+   .expense-actions .button-link ("แก้ไข") and BalanceSummaryPage's own
+   button-links, which reuse the same base class, are untouched. A single
+   selector (no `.secondary` variant needed) overrides both, since every
+   pill still carries the base .button-link class. */
+.group-detail-page .page-actions .button-link {
+  background: var(--ds-color-brand-wash);
+  color: var(--ds-color-brand);
+  border: 0;
+}
+
 .balance-summary {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -625,20 +656,68 @@ body:has(.invitations-page) {
   line-height: 1;
 }
 
+/* Figma 2:1229 (§M, mobile-rollout backlog): the pending tag's literal fill/
+   text (#eaf2f8 / #496a8a) has no DS token — the mobile-rollout decision
+   (§M resolution, option b) is to restyle onto the existing warning palette
+   rather than add a new info/neutral colour set, matching exactly how
+   desktop.css's own .group-detail-page .pending-tag rule already reads this
+   tag (Tag/Pending component, 6:8): warning-wash fill, warning text, no
+   border, opacity 1. Padding/font-size are untouched — 0.75rem already
+   equals the mobile-rollout's own ds/size/mobile/tag (13.5), so only the
+   colour treatment changes here. */
 .pending-tag {
   margin-left: 0.4rem;
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--ds-color-warning-wash);
+  color: var(--ds-color-warning);
   font-size: 0.75rem;
-  opacity: 0.75;
+  font-weight: 600;
 }
 
 .invite-form {
   margin-top: 0.75rem;
 }
 
+/* Figma 2:1237 "✓ Found: Praew S." (§J) — text fill #16815f is an exact,
+   un-snapped match for ds/color/brand. A lightweight indicator only, kept
+   separate from the existing .invite-confirm safety box below it (unchanged
+   logic — see GroupDetailPage.tsx). Hidden on desktop (styles/desktop.css):
+   no counterpart on the 11:30 frame, and it would just repeat what
+   .invite-confirm's own sentence already says there. */
+.invite-match {
+  margin: 0;
+  color: var(--ds-color-brand);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Figma 2:1240 "You can't invite members here" (§M) — SPEC explicitly has
+   "no roles; every user is equal" and groupsApi.addMember has no permission
+   check, so there is no real condition today that would make this notice
+   true. Per the §M resolution (restyle onto the warning palette, same as
+   .pending-tag above and desktop.css's .group-detail-page .notice /
+   .auth-card .form-error precedent) the STYLE is added so it's ready, but
+   it is intentionally not rendered anywhere in GroupDetailPage.tsx — wiring
+   it up would mean inventing a permission model the backend doesn't have.
+   Figma's literal fill/text (#eaf2f8 / #496a8a) has no DS token either way. */
+.invite-permission-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ds-color-notice-403-border);
+  border-radius: 0.375rem;
+  background: var(--ds-color-notice-403-bg);
+  color: var(--ds-color-warning);
+  font-size: 0.85rem;
+}
+
+/* Same surface + drop-shadow as .new-group-card above — this box sits on
+   the same canvas ground once lookupResult confirms a match. Desktop keeps
+   its own Phase 18 canvas-tinted fill (styles/desktop.css) and resets the
+   shadow to none rather than picking this one up. */
 .invite-confirm {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -646,6 +725,8 @@ body:has(.invitations-page) {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 .invite-confirm p {
@@ -734,6 +815,37 @@ button.secondary {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+/* Figma 2:1220/2:1223/2:1226 (§J): avatar + name grouped together so the
+   outer li's justify-content: space-between still puts the remove button on
+   the far right (Figma's own mock has no per-member remove control at all —
+   out of scope, untouched). */
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Figma 2:1221/2:1224/2:1227 (§J): flat colored circle, no initials/photo —
+   40px fixed diameter (not rem-scaled like type; it's a fixed graphic, same
+   reasoning as --bottom-nav-height). Fill is status-driven, not per-member
+   random: ACTIVE → ds/color/brand-wash (#e7f3ef, exact match), the mock's
+   one PENDING row → ds/color/border (#dde5e1, exact match) via
+   .member-avatar-pending below. 2px white stroke matches Figma's own
+   strokeWeight on every avatar node. Hidden on desktop (styles/desktop.css)
+   — desktop's own 11:30 frame has no avatar element on this page. */
+.member-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ds-color-brand-wash);
+  border: 2px solid var(--ds-color-surface);
+}
+
+.member-avatar-pending {
+  background: var(--ds-color-border);
 }
 
 .expense-list li {
