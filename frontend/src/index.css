@@ -176,6 +176,38 @@ a {
   cursor: pointer;
 }
 
+/* Figma 2:1135/2:1136/2:1138 (§I, mobile-rollout backlog): the card wrapper
+   + heading + visible field label around the create-group form. Radius
+   matches .group-list li below (no ds/radius/mobile/* token exists in code
+   yet — see the Phase 19/20 note on ds/size/mobile/* — so this is the same
+   hand-picked 0.5rem every other mobile card already uses). Neutralized on
+   desktop (styles/desktop.css), which keeps its own Phase 17 bare pill-row
+   design. */
+.new-group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
+}
+
+.new-group-card h2 {
+  margin: 0;
+}
+
+.new-group-form {
+  flex-wrap: wrap;
+}
+
+.new-group-label {
+  flex-basis: 100%;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 .group-list,
 .member-list,
 .expense-list {

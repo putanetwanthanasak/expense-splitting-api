@@ -369,10 +369,27 @@
     font-size: var(--ds-size-btn-sm);
     font-weight: var(--ds-weight-semibold);
   }
-  /* Create-group row → the green "+ กลุ่มใหม่" pill from Figma (9:23). */
+  /* Create-group row → the green "+ กลุ่มใหม่" pill from Figma (9:23). Desktop
+     keeps its own Phase 17 bare pill-row design — the card wrapper +
+     heading + visible label are a mobile-only addition (Figma
+     2:1135/2:1136/2:1138, §I in the mobile-rollout backlog) that predates
+     any desktop equivalent, so they're neutralized here rather than
+     restyled. */
+  .app-shell .groups-page .new-group-card {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    gap: 0;
+  }
+  .app-shell .groups-page .new-group-card > h2,
+  .app-shell .groups-page .new-group-label {
+    display: none;
+  }
   .app-shell .groups-page .inline-form {
     gap: 10px;
     align-items: center;
+    flex-wrap: nowrap;
   }
   .app-shell .groups-page .inline-form input {
     height: 45px;
