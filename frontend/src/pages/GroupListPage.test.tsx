@@ -39,6 +39,7 @@ beforeEach(() => {
           jsonResponse(200, [
             { id: 'g1', name: 'Trip', created_by_user_id: 'u1', created_at: '2026-01-01T00:00:00Z' },
             { id: 'g2', name: 'Flat', created_by_user_id: 'u2', created_at: '2026-01-01T00:00:00Z' },
+            { id: 'g3', name: 'Apartment 4B', created_by_user_id: 'u1', created_at: '2026-01-01T00:00:00Z' },
           ]),
         )
       }
@@ -58,6 +59,16 @@ beforeEach(() => {
             balances: [
               { user_id: 'u1', net_balance: '-40.00' },
               { user_id: 'u2', net_balance: '40.00' },
+            ],
+          }),
+        )
+      }
+      if (url.endsWith('/api/groups/g3/balances')) {
+        return Promise.resolve(
+          jsonResponse(200, {
+            balances: [
+              { user_id: 'u1', net_balance: '0.00' },
+              { user_id: 'u2', net_balance: '0.00' },
             ],
           }),
         )
@@ -110,5 +121,23 @@ describe('GroupListPage', () => {
     expect(owingAmount).toHaveClass('net-amount')
     expect(owingLabel.closest('.net')).toHaveClass('net-neg')
     expect(owingAmount.closest('.net')).toHaveClass('net-neg')
+  })
+
+  it('shows both the label and ฿0.00 for a settled group, not just the label', async () => {
+    render(
+      <MemoryRouter>
+        <GroupListPage />
+      </MemoryRouter>,
+    )
+
+    // g3: net 0 — matches Figma 2:1121's "Apartment 4B" row (settled label +
+    // ฿0.00 amount, both present). Previously the zero branch rendered only
+    // the label, dropping the amount entirely.
+    const settledLabel = await screen.findByText('ยอดครบแล้ว')
+    const settledAmount = screen.getByText('฿0.00')
+    expect(settledLabel).toHaveClass('net-label')
+    expect(settledAmount).toHaveClass('net-amount')
+    expect(settledLabel.closest('.net')).toHaveClass('net-zero')
+    expect(settledAmount.closest('.net')).toHaveClass('net-zero')
   })
 })

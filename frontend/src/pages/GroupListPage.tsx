@@ -31,6 +31,7 @@ function NetPosition({ net }: { net: Money }) {
     return (
       <span className="net net-zero">
         <span className="net-label">ยอดครบแล้ว</span>
+        <span className="net-amount">{formatMoney(ZERO)}</span>
       </span>
     )
   }
