@@ -691,3 +691,53 @@ button.secondary {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+/* --- Phase 19: bottom nav (foundation only — component built and exported,
+   not wired into AppLayout; <NavBar> is still the live mobile nav). Styled
+   with ds/color/* tokens directly (not the legacy 8 vars above) since this
+   is new Phase-19 surface, not a migration of existing rules. There is no
+   ds/size/mobile/* token namespace yet (flagged in the Phase 19 report) —
+   the geometry here is hand-picked rem, same convention as every other
+   mobile-baseline rule in this file. */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--ds-color-surface);
+  border-top: 1px solid var(--ds-color-border);
+  padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0;
+  border-radius: 0.5rem;
+  color: var(--ds-color-text-muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.bottom-nav-item-active {
+  color: var(--ds-color-brand);
+  font-weight: 600;
+}
+
+.bottom-nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.5rem;
+}
