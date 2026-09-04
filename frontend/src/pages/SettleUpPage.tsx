@@ -113,7 +113,23 @@ export function SettleUpPage() {
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
       <header className="page-head">
-        <h1>ชำระยอด</h1>
+        <div className="page-head-titles">
+          <h1>ชำระยอด</h1>
+          {/* Figma 2:1393 (§ Settle Up investigation, item 2): real
+              interpolation from the group already loaded on this page.
+              Desktop's own frame (13:210/13:229) DOES have a subtitle
+              node too — unlike Balance Summary/Login/Register, where
+              desktop had none or a wholly different concept — but its
+              exact wording/order differs ("{group} · จัดกลุ่มการโอนให้
+              เหลือน้อยลง" vs mobile's "รายการโอนที่แนะนำ · {group}") and
+              desktop hasn't implemented its own version yet either
+              (checked: no .settle-up-page .page-subtitle rule exists).
+              So this stays hidden on desktop for now — a genuine deferred
+              desktop gap, not "no such concept applies there." */}
+          {data !== null && (
+            <p className="page-subtitle">รายการโอนที่แนะนำ · {data.group.name}</p>
+          )}
+        </div>
       </header>
 
       {error !== null && (
@@ -138,14 +154,6 @@ export function SettleUpPage() {
               </div>
             ) : (
               <>
-                <div className="settle-note">
-                  <p>{data.settleUp.note}</p>
-                  <p className="muted">
-                    รายการนี้ช่วย<strong>ลดจำนวนครั้งของการโอน</strong>{' '}
-                    ไม่ได้รับประกันว่าจะเป็นจำนวนครั้งที่น้อยที่สุดเท่าที่เป็นไปได้
-                  </p>
-                </div>
-
                 {warning !== null && <p className="notice">{warning}</p>}
                 {actionError !== null && (
                   <p role="alert" className="form-error">
@@ -173,6 +181,24 @@ export function SettleUpPage() {
                     )
                   })}
                 </ul>
+
+                {/* Figma 2:1406 (§ Settle Up investigation, item 3): moved
+                    to AFTER the transfer list, matching Figma's position —
+                    content is untouched (both paragraphs, verbatim). The
+                    backend's own SETTLE_UP_NOTE (paragraph 1) and this
+                    caveat (paragraph 2) are the enforcement of the SPEC §5
+                    "never say minimum/optimal" rule; collapsing to
+                    Figma's single line would drop the only Thai-language
+                    instance of that caveat, so it stays as two paragraphs,
+                    restyled only (ds/color/text-faint + 16.2px, matching
+                    2:1406's own binding). */}
+                <div className="settle-note">
+                  <p>{data.settleUp.note}</p>
+                  <p className="muted">
+                    รายการนี้ช่วย<strong>ลดจำนวนครั้งของการโอน</strong>{' '}
+                    ไม่ได้รับประกันว่าจะเป็นจำนวนครั้งที่น้อยที่สุดเท่าที่เป็นไปได้
+                  </p>
+                </div>
               </>
             )}
           </section>
@@ -180,7 +206,26 @@ export function SettleUpPage() {
           <section>
             <h2>ประวัติการชำระเงิน</h2>
             {data.history.length === 0 ? (
-              <p className="centered-status">ยังไม่มีประวัติการชำระเงิน</p>
+              <div className="empty-state">
+                {/* Figma 2:1415/2:1417/2:1418 (§ Settle Up investigation,
+                    item 6): title matches the existing shipped sentence
+                    exactly already ("ยังไม่มีประวัติการชำระเงิน") — no
+                    drift there. Description is genuinely new (shipped had
+                    none at all), pulled verbatim from mobile's 2:1418, not
+                    invented — but it's mobile-only (hidden on desktop,
+                    styles/desktop.css): desktop's own frame (13:210, node
+                    13:252) has a real but DIFFERENT description
+                    ("...รายการจะบันทึกไว้ที่นี่ พร้อมวันที่และจำนวนเงิน"),
+                    not audited/decided for desktop in this pass, so mobile's
+                    wording doesn't leak there. */}
+                <p className="empty-state-emoji" aria-hidden="true">
+                  🧾
+                </p>
+                <p>ยังไม่มีประวัติการชำระเงิน</p>
+                <p className="muted history-empty-desc">
+                  เมื่อมีการทำเครื่องหมายว่าจ่ายแล้ว รายการจะอยู่ที่นี่
+                </p>
+              </div>
             ) : (
               <ul className="history-list">
                 {data.history.map((s) => (

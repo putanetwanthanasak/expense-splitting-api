@@ -1057,6 +1057,16 @@
     max-width: none;
     gap: var(--ds-main-gap);
   }
+  /* Figma 2:1393's tagline is mobile-only for now (§ Settle Up
+     investigation, item 2) — desktop's own frame (13:210/13:229) DOES
+     have a subtitle node too, unlike Balance Summary/Login/Register, just
+     with different wording/order and no shipped implementation of its own
+     yet (checked live before assuming either way). Hidden here rather
+     than showing mobile's mismatched copy; desktop's own version is a
+     separate, still-open gap for a future pass. */
+  .app-shell .settle-up-page .page-subtitle {
+    display: none;
+  }
   .app-shell .settle-up-page > section {
     padding: var(--ds-panel-pad);
     background: var(--ds-color-surface);
@@ -1087,6 +1097,10 @@
     background: var(--ds-color-row-wash);
     font-size: var(--ds-size-body);
     color: var(--ds-color-text);
+    /* index.css's mobile rule adds a card drop-shadow (§ Settle Up
+       investigation, item 5); desktop's own frame wraps rows in ONE
+       shadowed card with flat row-wash rows inside, not per-row shadows. */
+    box-shadow: none;
   }
   .app-shell .settle-up-page .transfer-row strong {
     font-family: var(--ds-font-numeric);
@@ -1117,6 +1131,12 @@
     border-radius: 0;
     font-size: var(--ds-size-body);
     color: var(--ds-color-text);
+    /* index.css's mobile rule adds a card surface + drop-shadow per row
+       (§ Settle Up investigation, item 5) — desktop keeps its existing
+       flat bordered-row list inside the one white section card above,
+       same reset Group Detail's .expense-list li already needed. */
+    background: none;
+    box-shadow: none;
   }
   .app-shell .settle-up-page .history-list .muted {
     color: var(--ds-color-text-faint);
@@ -1124,6 +1144,14 @@
   }
   .app-shell .settle-up-page .centered-status {
     color: var(--ds-color-text-muted);
+  }
+
+  /* Figma 13:210/13:252's own no-history description is real but different
+     wording (§ Settle Up investigation, item 6) — mobile's 2:1418 text
+     stays mobile-only rather than showing the wrong platform's copy;
+     desktop's own version is a separate, not-yet-decided gap. */
+  .app-shell .settle-up-page .history-empty-desc {
+    display: none;
   }
 
   /* Celebratory / empty states on both summary pages — dashed panel (13:207 / 13:245) */
