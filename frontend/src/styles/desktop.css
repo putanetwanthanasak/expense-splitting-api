@@ -611,6 +611,15 @@
   .app-shell .group-detail-page .page-head {
     align-items: center;
   }
+  /* Figma 2:1210 "N members · updated today" is a mobile-only addition
+     (§ Group Detail closeout, mobile-rollout backlog) sourced from the
+     2:1200 frame — this page's own desktop frame (11:30) was never audited
+     for a subtitle, so rather than assume one, it's neutralized here the
+     same way §I's card/heading/label were on the Groups page: hidden, not
+     guessed at. */
+  .app-shell .group-detail-page .page-subtitle {
+    display: none;
+  }
   .app-shell .group-detail-page .page-actions {
     gap: 10px;
   }
@@ -642,6 +651,11 @@
   }
   .app-shell .group-detail-page .member-list {
     gap: 4px;
+  }
+  /* Figma 2:1221/2:1224/2:1227 avatars are mobile-only (2:1200) — no
+     counterpart on this page's own desktop frame (11:30). */
+  .app-shell .group-detail-page .member-avatar {
+    display: none;
   }
   .app-shell .group-detail-page .member-list li {
     padding: 6px 0;
@@ -689,6 +703,28 @@
     color: var(--ds-color-text);
     border-color: var(--ds-color-border);
   }
+  /* Figma 2:1231 "Invite member" card is mobile-only (2:1200). This section
+     already sits on its own white panel on desktop (11:57, styled above via
+     `.group-detail-page > section`), so the reused .new-group-card wrapper
+     is neutralized exactly like the Groups page neutralizes it (§I) —
+     nested white-on-white card removed, its heading/label hidden — rather
+     than let a second boxed card render inside the first. */
+  .app-shell .group-detail-page .new-group-card {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    gap: 0;
+  }
+  .app-shell .group-detail-page .new-group-card > h2,
+  .app-shell .group-detail-page .new-group-label {
+    display: none;
+  }
+  /* Figma 2:1237 "✓ Found" match line is mobile-only — no counterpart on
+     11:30, and .invite-confirm's own sentence already says as much there. */
+  .app-shell .group-detail-page .invite-match {
+    display: none;
+  }
   .app-shell .group-detail-page .invite-form {
     margin-top: var(--ds-panel-gap);
     gap: 10px;
@@ -720,6 +756,10 @@
     border: 1px solid var(--ds-color-border);
     border-radius: var(--ds-radius-card);
     background: var(--ds-color-canvas);
+    /* index.css's mobile rule adds a card drop-shadow (§ Group Detail
+       closeout); this box keeps its existing canvas-tinted fill instead,
+       no shadow, same as before that rule existed. */
+    box-shadow: none;
   }
   .app-shell .group-detail-page .invite-confirm p {
     font-size: var(--ds-size-body);
@@ -745,6 +785,12 @@
     border: 0;
     border-bottom: 1px solid var(--ds-color-row-line);
     border-radius: 0;
+    /* index.css's mobile rule adds a card surface + drop-shadow per row
+       (§ Group Detail closeout) — desktop keeps its existing flat
+       bordered-row list inside the one white section card above, not a
+       stack of individually shadowed rows. */
+    background: none;
+    box-shadow: none;
   }
   .app-shell .group-detail-page .expense-desc {
     font-size: var(--ds-size-body);
