@@ -31,6 +31,7 @@ function NetPosition({ net }: { net: Money }) {
     return (
       <span className="net net-zero">
         <span className="net-label">ยอดครบแล้ว</span>
+        <span className="net-amount">{formatMoney(ZERO)}</span>
       </span>
     )
   }
@@ -115,18 +116,27 @@ export function GroupListPage() {
         </p>
       )}
 
-      <form className="inline-form" onSubmit={onCreate}>
-        <input
-          aria-label="ชื่อกลุ่มใหม่"
-          placeholder="ชื่อกลุ่มใหม่"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <button type="submit" disabled={creating || name.trim() === ''}>
-          {creating ? 'กำลังสร้าง…' : '+ กลุ่มใหม่'}
-        </button>
-      </form>
+      {/* Figma 2:1135/2:1136/2:1138 (§I, mobile-rollout backlog): a card
+          wrapper + section heading + visible field label around what was
+          previously a bare .inline-form with only aria-label/placeholder. */}
+      <div className="new-group-card">
+        <h2>สร้างกลุ่มใหม่</h2>
+        <form className="inline-form new-group-form" onSubmit={onCreate}>
+          <label htmlFor="new-group-name" className="new-group-label">
+            ชื่อกลุ่ม
+          </label>
+          <input
+            id="new-group-name"
+            placeholder="ชื่อกลุ่มใหม่"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <button type="submit" disabled={creating || name.trim() === ''}>
+            {creating ? 'กำลังสร้าง…' : '+ กลุ่มใหม่'}
+          </button>
+        </form>
+      </div>
 
       {rows === null && error === null && <p className="centered-status">กำลังโหลด…</p>}
 
