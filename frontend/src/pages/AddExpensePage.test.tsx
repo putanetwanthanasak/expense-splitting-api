@@ -152,14 +152,26 @@ describe('AddExpensePage', () => {
     await user.type(screen.getByLabelText('จำนวนเงินของ Bob'), '30')
     await user.type(screen.getByLabelText('จำนวนเงินของ Carol'), '30')
 
-    expect(screen.getByText(/ยอดรวมที่กรอก:/)).toHaveTextContent('฿100.00 จาก ฿100.00')
+    // §B fix (§ Add Expense investigation, item 1): label/amount now split
+    // across spans (see AddExpensePage.tsx), so this queries the containing
+    // <p> rather than an exact single-node text match.
+    expect(screen.getByText('ยอดรวมที่กรอก:').closest('p')).toHaveTextContent(
+      'ยอดรวมที่กรอก: ฿100.00 จาก ฿100.00',
+    )
     expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeEnabled()
 
     await user.clear(screen.getByLabelText('จำนวนเงินของ Carol'))
     await user.type(screen.getByLabelText('จำนวนเงินของ Carol'), '20')
 
-    expect(screen.getByText(/ยอดรวมที่กรอก:/)).toHaveTextContent('฿90.00 จาก ฿100.00')
-    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeDisabled()
+    expect(screen.getByText('ยอดรวมที่กรอก:').closest('p')).toHaveTextContent(
+      'ยอดรวมที่กรอก: ฿90.00 จาก ฿100.00',
+    )
+    // §Add Expense investigation, item 5: both the default and imbalanced
+    // labels render (CSS toggles which one shows per breakpoint), so this
+    // queries the button itself rather than an exact accessible-name match.
+    const submitButton = document.querySelector('button[type="submit"]')
+    expect(submitButton).toHaveTextContent('Balance amounts to add expense')
+    expect(submitButton).toBeDisabled()
 
     // The split.ts mismatch hint is shown in Thai, not the raw English message.
     expect(
@@ -202,7 +214,11 @@ describe('AddExpensePage', () => {
     expect(
       screen.queryByRole('heading', { name: 'ตัวอย่างการแบ่ง' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'บันทึกรายการ' })).toBeDisabled()
+    // §Add Expense investigation, item 5: both labels render, CSS toggles
+    // which one shows per breakpoint -- query the button directly.
+    const submitButton = document.querySelector('button[type="submit"]')
+    expect(submitButton).toHaveTextContent('Balance amounts to add expense')
+    expect(submitButton).toBeDisabled()
 
     // Restore a valid share and submit -> SHARES discriminated body.
     await user.clear(screen.getByLabelText('สัดส่วนของ Bob'))

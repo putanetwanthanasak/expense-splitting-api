@@ -832,6 +832,15 @@
     margin-inline: auto;
     gap: var(--ds-main-gap);
   }
+  /* Figma 2:1270's "{group} · แบ่งค่าใช้จ่าย" is mobile-only for now (§ Add
+     Expense investigation, item 7) — desktop's own frame (13:45/13:65)
+     models a DIFFERENT subtitle concept (a member-count line), with no
+     shipped implementation of its own yet either. Same shape as Settle
+     Up's finding: hidden here rather than showing mobile's mismatched
+     copy; desktop's own version is a separate, still-open gap. */
+  .app-shell .add-expense-page .page-subtitle {
+    display: none;
+  }
   .app-shell .add-expense-page .expense-form {
     gap: 18px;
     padding: var(--ds-panel-pad);
@@ -877,10 +886,23 @@
     border: 1px solid var(--ds-color-border);
     border-radius: var(--ds-radius-sm);
   }
+  /* §B fix (§ Add Expense investigation, item 1): font-family used to sit
+     right here, on the whole "ยอดรวมที่กรอก: ฿90.00 จาก ฿100.00" line — a
+     genuine, previously-undetected instance of the same bug already fixed
+     3 times elsewhere (Groups .net, this page's own .preview ul, Balance
+     Summary's .balance-headline): it forced the Thai words "ยอดรวมที่กรอก:"
+     and "จาก" through the numeral-only font. Moved onto .running-total-amount
+     only, matching .preview-name/.preview-amount's split just below. */
   .app-shell .add-expense-page .running-total {
-    font-family: var(--ds-font-numeric);
     font-size: var(--ds-size-body);
     color: var(--ds-color-text-muted);
+  }
+  .app-shell .add-expense-page .running-total-label {
+    font-family: var(--ds-font-thai);
+  }
+  .app-shell .add-expense-page .running-total-amount {
+    font-family: var(--ds-font-numeric);
+    font-variant-numeric: tabular-nums;
   }
   .app-shell .add-expense-page .running-total-off {
     color: var(--ds-color-danger);
@@ -907,8 +929,18 @@
     align-items: baseline;
     gap: 8px;
     padding-bottom: 8px;
+    border: 0;
     border-bottom: 1px solid var(--ds-color-row-line);
+    border-radius: 0;
     color: var(--ds-color-text);
+    /* index.css's mobile rule adds a full border + card surface + shadow
+       per row (§ Add Expense investigation, item 6) — desktop keeps its
+       existing flat bordered-row list inside the one canvas-tinted
+       .preview card above, not a stack of individually shadowed rows.
+       The border reset above also stops mobile's new full `border`
+       shorthand fighting this rule's own border-bottom-only style. */
+    background: none;
+    box-shadow: none;
   }
   .app-shell .add-expense-page .preview-name {
     font-family: var(--ds-font-thai);
@@ -946,6 +978,21 @@
     background: var(--ds-color-disabled-bg);
     color: var(--ds-color-disabled-text);
     opacity: 1;
+  }
+  /* Figma 2:1329/2:1330's static English label is mobile-only (§ Add
+     Expense investigation, item 5) — desktop's own frame (13:123/13:124)
+     shows a different, dynamic message this pass doesn't build. Inverted
+     from index.css's mobile toggle: show the normal label, hide the
+     imbalanced one. */
+  .app-shell .add-expense-page .expense-form button[type='submit'] .submit-label-imbalanced {
+    display: none;
+  }
+  .app-shell
+    .add-expense-page
+    .expense-form
+    button[type='submit']:has(.submit-label-imbalanced)
+    .submit-label-default {
+    display: inline;
   }
 
   /* ---- Balance Summary (13:146) — brand-wash headline card + members card ---- */
