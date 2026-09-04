@@ -1,12 +1,21 @@
 :root {
-  --bg: #ffffff;
-  --fg: #1a1a2e;
-  --muted: #6b6375;
-  --border: #d9d7de;
-  --accent: #4338ca;
-  --error: #b91c1c;
-  --pos: #15803d;
-  --neg: #b91c1c;
+  /* Phase 19: repointed to the ds/color/* tokens (styles/tokens.css) instead
+     of their own literal hex — a single ds token edit now restyles mobile
+     too, not just desktop. Comments note the legacy value each one replaces
+     and which ds token it now resolves to; see the Phase 19 mapping-table
+     PR description for the full before/after and the elements each var
+     touches. --pos has no distinct ds token — the ds set reuses brand green
+     for positive money (see tokens.css's --ds-color-brand comment), so --pos
+     and --accent now resolve to the identical value where they didn't
+     before. */
+  --bg: var(--ds-color-surface); /* was #ffffff; ds/color/surface #ffffff */
+  --fg: var(--ds-color-text); /* was #1a1a2e; ds/color/text #17211e */
+  --muted: var(--ds-color-text-muted); /* was #6b6375; ds/color/text-muted #687570 */
+  --border: var(--ds-color-border); /* was #d9d7de; ds/color/border #dde5e1 */
+  --accent: var(--ds-color-brand); /* was #4338ca (indigo); ds/color/brand #16815f (green) */
+  --error: var(--ds-color-danger); /* was #b91c1c; ds/color/danger #c94d55 */
+  --pos: var(--ds-color-brand); /* was #15803d; no ds/color/positive — reuses ds/color/brand #16815f */
+  --neg: var(--ds-color-danger); /* was #b91c1c; ds/color/danger #c94d55 (already == --error) */
 
   /* Global base: IBM Plex Sans Thai (loaded in index.html) and the larger base
      size, both from tokens.css so a single token change restyles mobile too —
@@ -17,19 +26,6 @@
   line-height: 1.5;
   color: var(--fg);
   background: var(--bg);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16161f;
-    --fg: #ededf2;
-    --muted: #a3a0ab;
-    --border: #33313d;
-    --accent: #a5b4fc;
-    --error: #f87171;
-    --pos: #4ade80;
-    --neg: #f87171;
-  }
 }
 
 * {
@@ -694,4 +690,54 @@ button.secondary {
   gap: 0.5rem;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+/* --- Phase 19: bottom nav (foundation only — component built and exported,
+   not wired into AppLayout; <NavBar> is still the live mobile nav). Styled
+   with ds/color/* tokens directly (not the legacy 8 vars above) since this
+   is new Phase-19 surface, not a migration of existing rules. There is no
+   ds/size/mobile/* token namespace yet (flagged in the Phase 19 report) —
+   the geometry here is hand-picked rem, same convention as every other
+   mobile-baseline rule in this file. */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--ds-color-surface);
+  border-top: 1px solid var(--ds-color-border);
+  padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0;
+  border-radius: 0.5rem;
+  color: var(--ds-color-text-muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.bottom-nav-item-active {
+  color: var(--ds-color-brand);
+  font-weight: 600;
+}
+
+.bottom-nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.5rem;
 }
