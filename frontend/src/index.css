@@ -605,6 +605,11 @@ body:has(.invitations-page) {
   font-weight: 600;
 }
 
+/* Pending-invitation count. Bound to ds/color/danger, not --accent — verified
+   against Figma 2:1121 node 2:1134's actual bound variable (ds/color/danger,
+   #c94d55), and matches the desktop <Sidebar> .ds-badge, which already used
+   ds/color/danger. --accent (brand green) was the wrong token for an
+   attention-drawing count, not just a stale-palette leftover. */
 .nav-badge {
   display: inline-flex;
   align-items: center;
@@ -613,7 +618,7 @@ body:has(.invitations-page) {
   height: 1.1rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--ds-color-danger);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 600;
