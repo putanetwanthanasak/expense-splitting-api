@@ -106,6 +106,20 @@ a {
   color: var(--accent);
 }
 
+/* --- Phase 20: Groups/Invitations two-tier canvas+surface background -----
+   Figma 2:1121 / 2:1161 (verified via bound variables, not eyeballed): the
+   page frame itself is ds/color/canvas, with cards sitting on top at
+   ds/color/surface + a drop-shadow (see .new-group-card / .group-list li /
+   .invitation-row above and below). The other 6 mobile pages keep the flat
+   --bg (= ds/color/surface) background from the Phase 19 palette migration —
+   scoped to just these 2 routes since only they were verified against
+   Figma this pass. Targets <body>, not .page, so the canvas colour reaches
+   into body's own padding too, not just the .page column. */
+body:has(.groups-page),
+body:has(.invitations-page) {
+  background: var(--ds-color-canvas);
+}
+
 /* --- Phase 11: group list / detail / add-expense ------------------------- */
 
 .page {
@@ -219,6 +233,10 @@ a {
   gap: 0.5rem;
 }
 
+/* Figma 2:1121 group-row cards: white surface + drop-shadow over the page's
+   canvas background (see the .groups-page / .invitations-page background
+   rule below) — was a flat, unshadowed border-only row. Border colour is
+   unchanged (--border already resolves to ds/color/border, an exact match). */
 .group-list li {
   display: flex;
   align-items: center;
@@ -227,6 +245,8 @@ a {
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 /* Balance status: a small Thai label above the ฿ amount (two elements, not
@@ -671,6 +691,9 @@ button.secondary {
   gap: 0.5rem;
 }
 
+/* Figma 2:1161 invitation-row cards: same surface + drop-shadow treatment
+   as .group-list li above (2:1173, verified byte-identical: white fill,
+   same DROP_SHADOW). */
 .invitation-row {
   display: flex;
   align-items: center;
@@ -679,6 +702,8 @@ button.secondary {
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 .invitation-info {
