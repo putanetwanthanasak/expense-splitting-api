@@ -328,7 +328,7 @@
 
   /* ---- Shared: page heading inside the shell --------------------- */
   .app-shell .groups-page .page-head h1,
-  .app-shell .invitations-page > h1 {
+  .app-shell .invitations-page .page-head h1 {
     font-family: var(--ds-font-thai);
     font-size: var(--ds-size-page-title);
     font-weight: var(--ds-weight-bold);
@@ -552,9 +552,9 @@
     font-size: var(--ds-size-label);
     text-decoration: none;
   }
-  .app-shell .add-expense-page > h1,
-  .app-shell .balance-summary-page > h1,
-  .app-shell .settle-up-page > h1,
+  .app-shell .add-expense-page .page-head h1,
+  .app-shell .balance-summary-page .page-head h1,
+  .app-shell .settle-up-page .page-head h1,
   .app-shell .group-detail-page .page-head h1 {
     margin: 0;
     font-size: var(--ds-size-page-title);
