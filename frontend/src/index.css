@@ -230,11 +230,16 @@ a {
    verified via the plugin API. Desktop is unaffected for the equivalent
    reason — #root:has(> .auth-card) (styles/desktop.css) is its own
    min-height:100vh grid with its own canvas background, so body's paints
-   underneath it, never on screen. */
+   underneath it, never on screen.
+
+   Balance Summary 2:1332 joins the list too (§ Balance Summary
+   investigation, item 4) — same #f4f7f6 fill, live-verified. Desktop
+   unaffected for the same <Sidebar> + .app-shell reason as Group Detail. */
 body:has(.groups-page),
 body:has(.invitations-page),
 body:has(.group-detail-page),
-body:has(.auth-card) {
+body:has(.auth-card),
+body:has(.balance-summary-page) {
   background: var(--ds-color-canvas);
 }
 
@@ -599,10 +604,15 @@ body:has(.auth-card) {
   border: 0;
 }
 
+/* Figma 2:1343 "Your standing" (§ Balance Summary investigation, item 2):
+   filled ds/color/brand-wash, radius already matched ds/radius/mobile/card
+   at 0.5rem (9px @ 18px base) before this change — nothing to touch there.
+   No border, no shadow, matching Figma exactly (verified live: 2:1343 has
+   no stroke and empty effects). */
 .balance-summary {
-  border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 1rem;
+  background: var(--ds-color-brand-wash);
 }
 
 /* Label span + amount span (two elements, not one combined sentence). */
@@ -642,6 +652,27 @@ body:has(.auth-card) {
   flex-direction: column;
   gap: 0.35rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* Figma 2:1360/2:1361 vs desktop's own 13:199 (§ Balance Summary
+   investigation, item 3) — see the comment in BalanceSummaryPage.tsx for
+   the full reasoning. Mobile baseline: show the badge, hide the plain
+   text; styles/desktop.css inverts both, matching each breakpoint's own
+   real Figma source. */
+.you-text {
+  display: none;
+}
+
+.you-badge {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--ds-color-brand-wash);
+  color: var(--ds-color-brand);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .settle-note {
@@ -711,6 +742,18 @@ body:has(.auth-card) {
 .empty-state-emoji {
   margin: 0 0 0.25rem;
   font-size: 1.75rem;
+}
+
+/* Figma 2:1378 (§ Balance Summary investigation, item 5): row-wash fill, no
+   stroke — matches this ONE frame's own binding (verified live). Deliberate
+   scope decision, not an oversight: .empty-state is shared by 4+ other
+   pages (Group Detail, Settle Up, Groups, Invitations) that haven't each
+   been individually re-verified against their own Figma frame yet, so this
+   stays scoped to .balance-summary-page rather than changing the shared
+   base rule (dashed border, no fill) for everyone. */
+.balance-summary-page .empty-state {
+  border: 0;
+  background: var(--ds-color-row-wash);
 }
 
 /* --- Phase 14: persistent nav + invitations ----------------------------- */

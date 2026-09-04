@@ -953,6 +953,25 @@
     max-width: none;
     gap: var(--ds-main-gap);
   }
+  /* Figma 2:1342's "{group} · สรุปเป็นภาษาง่าย ๆ" is a mobile-only tagline
+     (§ Balance Summary investigation, item 1) — desktop's own frame
+     (13:146/13:165) models a DIFFERENT subtitle entirely (a last-updated
+     timestamp the API doesn't provide anywhere), so rather than show
+     mobile's tagline text where desktop expects something else, it's
+     hidden here — same as Group Detail's subtitle neutralization. */
+  .app-shell .balance-summary-page .page-subtitle {
+    display: none;
+  }
+  /* Figma 2:1360/2:1361 vs desktop's own 13:199 (§ Balance Summary
+     investigation, item 3) — desktop bakes "this is you" into the text
+     itself, with no separate pill; inverted from the mobile baseline
+     (index.css) so each breakpoint matches its own real Figma source. */
+  .app-shell .balance-summary-page .you-text {
+    display: inline;
+  }
+  .app-shell .balance-summary-page .you-badge {
+    display: none;
+  }
   .app-shell .balance-summary-page .balance-summary {
     padding: var(--ds-panel-pad);
     border: 1px solid var(--ds-color-headline-border);
