@@ -19,19 +19,6 @@
   background: var(--bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16161f;
-    --fg: #ededf2;
-    --muted: #a3a0ab;
-    --border: #33313d;
-    --accent: #a5b4fc;
-    --error: #f87171;
-    --pos: #4ade80;
-    --neg: #f87171;
-  }
-}
-
 * {
   box-sizing: border-box;
 }

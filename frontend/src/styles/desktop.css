@@ -522,10 +522,10 @@
     font-family: var(--ds-font-thai);
     color: var(--ds-color-text);
   }
-  /* These pages sit on always-light `--ds-*` card surfaces, so pin body copy
-     to the light-palette tokens too — the base index.css rules colour it with
-     the theme-reactive `--fg` / `--muted`, which turn near-white (invisible on
-     a white card) under `prefers-color-scheme: dark`. */
+  /* These pages sit on `--ds-*` card surfaces, so pin body copy to the same
+     token values rather than the base index.css `--fg` / `--muted` (Phase 19:
+     no longer theme-reactive, but still a distinct legacy-vs-ds hex pair —
+     this keeps the two in visual sync on these cards). */
   .app-shell .add-expense-page .split-row,
   .app-shell .add-expense-page .split-row-name,
   .app-shell .add-expense-page .participants label,
