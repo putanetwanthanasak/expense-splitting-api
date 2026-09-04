@@ -23,6 +23,57 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 const LOGIN_PATH = '/login'
 
+/**
+ * § Login/Register investigation, item 5: a one-shot flag so LoginPage can
+ * tell "the interceptor bounced me here" apart from "I navigated here
+ * myself" -- the Figma 2:1087-2:1091 amber notice has no shipped
+ * counterpart today because nothing captured this distinction before.
+ * sessionStorage, not localStorage: this is a transient signal for the
+ * very next page load, not something that should survive across browser
+ * sessions. Same try/catch-and-degrade convention as token.ts (private
+ * mode / disabled storage just means the notice doesn't show -- the
+ * redirect itself still happens either way). */
+const SESSION_EXPIRED_KEY = 'esa.session-expired'
+
+function markSessionExpired(): void {
+  try {
+    sessionStorage.setItem(SESSION_EXPIRED_KEY, '1')
+  } catch {
+    /* ignore -- the notice just won't show */
+  }
+}
+
+function readAndClearSessionExpiredFlag(): boolean {
+  try {
+    const wasSet = sessionStorage.getItem(SESSION_EXPIRED_KEY) !== null
+    sessionStorage.removeItem(SESSION_EXPIRED_KEY)
+    return wasSet
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Read + cleared exactly once, right here at module-evaluation time --
+ * NOT inside a component's useState initializer or a mount effect. Both of
+ * those are deliberately double-invoked by React 18 StrictMode in dev (to
+ * surface impure side effects), which silently ate this flag: the first
+ * invocation would read '1' and clear it, the second would then read
+ * nothing and "win" as the committed state, so the notice never rendered.
+ * A module's top-level code runs exactly once per real page load no matter
+ * how many times a component re-renders or how many files import from
+ * here (the module system caches the instance) -- caching the result here
+ * sidesteps the double-invoke problem entirely. Verified against the
+ * actual failure via a live corrupted-token 401 before landing this fix,
+ * not assumed. */
+const sessionExpiredOnLoad = readAndClearSessionExpiredFlag()
+
+/** LoginPage reads this on render; the actual read-and-clear already
+ * happened above, at import time. */
+export function consumeSessionExpiredFlag(): boolean {
+  return sessionExpiredOnLoad
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly detail: string
@@ -66,6 +117,7 @@ async function readDetail(res: Response): Promise<string> {
 function redirectToLogin(): void {
   clearToken()
   if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
+    markSessionExpired()
     window.location.assign(LOGIN_PATH)
   }
 }

@@ -41,12 +41,29 @@ body {
   padding: 3rem 1rem;
 }
 
+/* § Login/Register investigation: with the canvas body background above,
+   .auth-card needs its own visible surface — it had none on mobile before
+   (only desktop's .auth-card, inside the 1024px block, was ever a white
+   card). Figma's own mobile mock has no card at all (no fill on "Login
+   form"/"Registration form", zero DROP_SHADOW anywhere) — this is a
+   deliberate departure from that literal mock, reusing .new-group-card's
+   exact values instead, to match the canvas+white-card pattern already
+   shipped on Groups/Invitations/Group Detail rather than adopt Figma's
+   flatter treatment (per-decision, not per-Figma). Desktop is untouched:
+   its own .auth-card rule (styles/desktop.css) re-declares every one of
+   these properties unconditionally, so it fully overrides this at
+   >=1024px regardless of load order. */
 .auth-card {
   width: 100%;
   max-width: 22rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 .auth-card h1 {
@@ -98,6 +115,90 @@ body {
   font-size: 0.875rem;
 }
 
+/* § Login/Register investigation, item 2: box STRUCTURE (flex/gap/padding/
+   radius/font/dot-bullet) is desktop.css's .auth-card .form-error rule,
+   reused verbatim -- but the COLOR is mobile's own binding, not desktop's.
+   Checked both live via getVariableByIdAsync before deciding: mobile 2:1079
+   binds ds/color/notice-401-bg / ds/color/danger (red); desktop's own
+   reconciled Login frame (7:2, node 7:18/7:19/7:20 -- same real-world
+   invalid-credentials notice) binds ds/color/notice-403-bg / ds/color/warning
+   (amber). Desktop's shipped amber is correct relative to ITS OWN Figma
+   frame, not a bug -- the two frames just made different semantic choices
+   for the same notice. Per decision, mobile follows its own frame's colour
+   rather than copying desktop's. Unscoped by media query -- these are plain
+   :root custom properties (tokens.css). Scoped to .auth-card so the plain
+   .form-error above (Group Detail, expense pages, etc.) is untouched, same
+   scoping desktop.css already uses. */
+.auth-card .form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-color-notice-401-bg);
+  color: var(--ds-color-danger);
+  font-family: var(--ds-font-thai);
+  font-size: var(--ds-size-label);
+}
+
+.auth-card .form-error::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-danger);
+}
+
+/* § Login/Register investigation, item 5: the session-expired notice
+   (Figma 2:1087-2:1091, literal copy pulled live from those nodes -- title
+   is genuinely English in Figma, same as every other title/label/button on
+   these 2 frames, not a translation slip on my part). Same box shell as
+   .auth-card .form-error above (padding/radius), extended to a
+   title+description column since this notice is two lines, not one. Colour
+   is this node's own binding -- notice-403-bg/warning (2:1087/2:1090) --
+   NOT item 2's danger family: a wrong password is a real error (red), a
+   dead session is a softer notice (amber), and Figma's distinction there is
+   intentional, not a per-node inconsistency to unify away. The description
+   line keeps Figma's own text-muted binding (2:1091), unaffected by the
+   danger-vs-warning question either way. Conditionally rendered only when
+   consumeSessionExpiredFlag() returns true (api.ts) -- never a fabricated
+   condition. */
+.auth-card .session-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-color-notice-403-bg);
+}
+
+.auth-card .session-notice-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ds-color-warning);
+  font-family: var(--ds-font-thai);
+  font-size: var(--ds-size-label);
+  font-weight: 600;
+}
+
+.auth-card .session-notice-title::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-warning);
+}
+
+.auth-card .session-notice-desc {
+  margin: 4px 0 0;
+  color: var(--ds-color-text-muted);
+  font-family: var(--ds-font-thai);
+  font-size: 0.8rem;
+}
+
 .centered-status {
   color: var(--muted);
 }
@@ -122,10 +223,18 @@ a {
    pair, verified via the plugin API (same #f4f7f6 frame fill, same
    DROP_SHADOW on every card). Desktop is unaffected for the same reason PR
    #29 already established: at >=1024px <Sidebar> + .app-shell together cover
-   the full viewport, so body's background never paints on screen there. */
+   the full viewport, so body's background never paints on screen there.
+
+   Login 2:1058 / Register 2:1093 join the same list (§ Login/Register
+   investigation): both outer frames fill the identical #f4f7f6 canvas, live-
+   verified via the plugin API. Desktop is unaffected for the equivalent
+   reason — #root:has(> .auth-card) (styles/desktop.css) is its own
+   min-height:100vh grid with its own canvas background, so body's paints
+   underneath it, never on screen. */
 body:has(.groups-page),
 body:has(.invitations-page),
-body:has(.group-detail-page) {
+body:has(.group-detail-page),
+body:has(.auth-card) {
   background: var(--ds-color-canvas);
 }
 
