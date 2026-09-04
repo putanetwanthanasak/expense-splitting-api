@@ -41,6 +41,9 @@ export function RegisterPage() {
       <AuthBrandPanel />
       <main className="auth-card">
         <h1>สร้างบัญชีใหม่</h1>
+        {/* Figma 2:1103 (§ Login/Register investigation, item 4): literal
+            copy pulled live from the node, not translated/guessed. */}
+        <p className="page-subtitle">เริ่มแบ่งบิลกับกลุ่มของคุณได้ในไม่กี่วินาที</p>
         <form onSubmit={onSubmit} noValidate>
           <label>
             ชื่อ

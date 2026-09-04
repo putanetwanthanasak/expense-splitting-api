@@ -331,6 +331,19 @@
   .auth-card > p:last-child a {
     color: var(--ds-color-brand);
   }
+  /* § Login/Register investigation, items 4-5: both are mobile-only
+     additions (Figma 2:1069/2:1103 subtitle, 2:1087-2:1091 session notice)
+     sourced from the mobile frames 2:1058/2:1093 — checked live, and
+     desktop's own reconciled frames (7:2/7:24) have neither a subtitle
+     node under the title nor a second notice node (only the one
+     invalid-credentials notice, 7:18, which .auth-card .form-error above
+     already covers). Same discipline as Group Detail's subtitle: hidden
+     here rather than assumed to match a frame that was never audited for
+     either. */
+  .auth-card .page-subtitle,
+  .auth-card .session-notice {
+    display: none;
+  }
 
   /* ---- Shared: page heading inside the shell --------------------- */
   .app-shell .groups-page .page-head h1,
