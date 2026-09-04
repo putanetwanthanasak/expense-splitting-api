@@ -63,8 +63,14 @@ interface Preview {
   result: SplitResult | null
   /** A hint about why `result` is null (partial input, totals don't match yet). */
   hint: string | null
-  /** "฿90.00 of ฿100.00" / "90.00% of 100%" for EXACT / PERCENTAGE; null otherwise. */
-  runningTotal: string | null
+  /**
+   * "฿90.00" + "฿100.00" (EXACT) or "90.00%" + "100%" (PERCENTAGE); null
+   * otherwise. Kept as two parts, not one pre-joined "X จาก Y" string —
+   * desktop.css's own §B bug (font-family: var(--ds-font-numeric) on the
+   * whole combined line, forcing "จาก" through the numeral font) is what
+   * this shape exists to avoid; see the render below.
+   */
+  runningTotal: { current: string; total: string } | null
 }
 
 const EMPTY_PREVIEW: Preview = { result: null, hint: null, runningTotal: null }
@@ -75,6 +81,10 @@ export function AddExpensePage() {
   const isEditing = expenseId !== undefined
 
   const [members, setMembers] = useState<GroupMember[] | null>(null)
+  // § Add Expense investigation, item 7: only the group's name is needed
+  // for the subtitle -- everything else this page uses already comes from
+  // `detail.members` above.
+  const [groupName, setGroupName] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [description, setDescription] = useState('')
@@ -105,6 +115,7 @@ export function AddExpensePage() {
       // as either with a 400, so they never appear in this picker.
       const active = detail.members.filter((m) => m.status === 'ACTIVE')
       setMembers(active)
+      setGroupName(detail.name)
 
       if (expense === null) {
         setSelected(Object.fromEntries(active.map((m) => [m.user_id, true] as const)))
@@ -185,10 +196,10 @@ export function AddExpensePage() {
     if (splitType === 'EXACT') {
       const parsed = tryParseEach(participantIds, values, parseMoney)
       const running = parsed === null ? null : sumMoney(parsed.map((p) => p.value))
-      const runningTotal =
-        running === null
-          ? `— จาก ${formatMoney(amount)}`
-          : `${formatMoney(running)} จาก ${formatMoney(amount)}`
+      const runningTotal = {
+        current: running === null ? '—' : formatMoney(running),
+        total: formatMoney(amount),
+      }
       if (parsed === null) {
         return {
           result: null,
@@ -213,10 +224,10 @@ export function AddExpensePage() {
         parsed === null
           ? null
           : (parsed.reduce((s, p) => s + p.value, 0) as Percent)
-      const runningTotal =
-        runningPct === null
-          ? '—% จาก 100%'
-          : `${toPercentApiString(runningPct)}% จาก 100%`
+      const runningTotal = {
+        current: runningPct === null ? '—%' : `${toPercentApiString(runningPct)}%`,
+        total: '100%',
+      }
       if (parsed === null) {
         return {
           result: null,
@@ -360,7 +371,16 @@ export function AddExpensePage() {
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
       <header className="page-head">
-        <h1>{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใช้จ่าย'}</h1>
+        <div className="page-head-titles">
+          <h1>{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใช้จ่าย'}</h1>
+          {/* Figma 2:1270 (§ Add Expense investigation, item 7): real
+              interpolation, matching 2:1270's exact pattern ("{group} ·
+              แบ่งค่าใช้จ่าย"). Hidden on desktop: its own frame (13:45/13:65)
+              models a different, still-unimplemented member-count subtitle
+              -- a separate deferred desktop gap, same shape as Settle
+              Up's finding. */}
+          {groupName !== null && <p className="page-subtitle">{groupName} · แบ่งค่าใช้จ่าย</p>}
+        </div>
       </header>
 
       <form className="expense-form" onSubmit={onSubmit} noValidate>
@@ -461,7 +481,19 @@ export function AddExpensePage() {
               preview.result === null ? 'running-total running-total-off' : 'running-total'
             }
           >
-            ยอดรวมที่กรอก: {preview.runningTotal}
+            {/* §B (§ Add Expense investigation, item 1): a genuine desktop
+                bug, unrelated to the mobile track — desktop.css put
+                font-family: var(--ds-font-numeric) on the whole combined
+                "ยอดรวมที่กรอก: ฿90.00 จาก ฿100.00" line, forcing "ยอดรวมที่กรอก:"
+                and "จาก" through the numeral-only font. Split into
+                label/amount spans, same discipline as the 3 prior §B
+                fixes (Groups .net, this page's own .preview ul, Balance
+                Summary's .balance-headline) — every Thai word stays
+                Thai-font, every number stays numeral-font. */}
+            <span className="running-total-label">ยอดรวมที่กรอก:</span>{' '}
+            <span className="running-total-amount">{preview.runningTotal.current}</span>{' '}
+            <span className="running-total-label">จาก</span>{' '}
+            <span className="running-total-amount">{preview.runningTotal.total}</span>
           </p>
         )}
 
@@ -501,8 +533,37 @@ export function AddExpensePage() {
           </p>
         )}
 
+        {/* Figma 2:1329/2:1330 (§ Add Expense investigation, item 5): the
+            disabled button's label there is genuinely English ("Balance
+            amounts to add expense"), same as Login's session-expired
+            title -- used verbatim, not translated. Scoped to the specific
+            scenario Figma's mock depicts (an imbalanced EXACT/PERCENTAGE/
+            SHARES split, preview.hint !== null) -- other disabled reasons
+            (empty description, no payer, no amount) have no Figma
+            counterpart, so they keep the normal dimmed label instead of
+            inventing more explanatory text Figma doesn't specify.
+
+            Mobile-only, not shared behaviour: checked desktop's own
+            disabled button (13:45, node 13:123/13:124) live and it shows
+            a completely different, DYNAMIC message ("ยังไม่สมดุล ·
+            ขาดอีก ฿150.00" -- a computed still-missing amount), not this
+            static text -- a separate, larger feature out of scope for
+            this decision. Both labels render; CSS toggles which one shows
+            per breakpoint (index.css / desktop.css), same technique as
+            Balance Summary's you-badge/you-text. */}
         <button type="submit" disabled={!canSubmit}>
-          {submitting ? 'กำลังบันทึก…' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
+          {submitting ? (
+            'กำลังบันทึก…'
+          ) : (
+            <>
+              <span className="submit-label-default">
+                {isEditing ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
+              </span>
+              {!canSubmit && preview.hint !== null && (
+                <span className="submit-label-imbalanced">Balance amounts to add expense</span>
+              )}
+            </>
+          )}
         </button>
       </form>
     </main>

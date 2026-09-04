@@ -237,13 +237,18 @@ a {
    unaffected for the same <Sidebar> + .app-shell reason as Group Detail.
 
    Settle Up 2:1383 joins too (§ Settle Up investigation, item 4) — same
-   #f4f7f6 fill, live-verified. */
+   #f4f7f6 fill, live-verified.
+
+   Add Expense 2:1260 joins too (§ Add Expense investigation, item 8) —
+   same #f4f7f6 fill, live-verified after this frame's own §N dark-to-
+   light redraw. */
 body:has(.groups-page),
 body:has(.invitations-page),
 body:has(.group-detail-page),
 body:has(.auth-card),
 body:has(.balance-summary-page),
-body:has(.settle-up-page) {
+body:has(.settle-up-page),
+body:has(.add-expense-page) {
   background: var(--ds-color-canvas);
 }
 
@@ -498,10 +503,13 @@ body:has(.settle-up-page) {
   color: var(--fg);
 }
 
+/* Figma 2:1299/2:1303/2:1307 "Amount input" (§ Add Expense investigation,
+   item 9): borderless, verified live -- none of the 3 nodes carry a
+   stroke, unlike the main form's Input fields, which do. */
 .split-value {
   width: 8rem;
   padding: 0.4rem 0.5rem;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 0.375rem;
   background: var(--bg);
   color: var(--fg);
@@ -543,19 +551,42 @@ body:has(.settle-up-page) {
 }
 
 /* Name span + amount span (two elements, not one "{name}: {amount}" string). */
+/* Figma 2:1312/2:1319/2:1324 (§ Add Expense investigation, item 6): each
+   preview row is its own white+shadow card, same per-row pattern as
+   Balance Summary's member-standing rows and Settle Up's transfer/history
+   rows -- byte-identical DROP_SHADOW, verified live. */
 .preview li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.15rem 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
 }
 
 .preview-amount {
   margin-left: auto;
 }
 
+/* Figma 2:1317/2:1318 (§ Add Expense investigation, items 3-4): a real
+   pill, not plain colored text -- and bound to ds/color/brand-wash-soft /
+   ds/color/brand (green), NOT the blue the mobile node itself carries.
+   Checked live before deciding: desktop's own Add Expense frame (13:45,
+   node 70:143) models this exact same content ("+0.01 เศษสตางค์") as a
+   real, already-built Tag/Remainder component instance, fully bound to
+   this green pair -- mobile's blue reads as a Figma authoring drift
+   against that real component, not an intentional palette choice, so
+   mobile follows the real component rather than the drift. Values reused
+   verbatim from desktop.css's own already-correct .remainder rule. */
 .remainder {
-  color: var(--pos);
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--ds-color-brand-wash-soft);
+  color: var(--ds-color-brand);
   font-weight: 600;
 }
 
@@ -577,6 +608,14 @@ body:has(.settle-up-page) {
 .expense-form button[type='submit']:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Figma 2:1329/2:1330 (§ Add Expense investigation, item 5): mobile shows
+   the imbalanced-state label and hides the default one whenever both are
+   present (:has() -- already used elsewhere in this file for the same
+   kind of breakpoint toggle); desktop.css inverts both. */
+.expense-form button[type='submit']:has(.submit-label-imbalanced) .submit-label-default {
+  display: none;
 }
 
 /* --- Phase 12: balance summary / settle up ----------------------------- */
