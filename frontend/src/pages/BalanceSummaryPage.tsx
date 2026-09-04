@@ -74,7 +74,18 @@ export function BalanceSummaryPage() {
         <Link to={`/groups/${groupId}`}>← กลับไปที่กลุ่ม</Link>
       </p>
       <header className="page-head">
-        <h1>ยอดคงเหลือ</h1>
+        <div className="page-head-titles">
+          <h1>ยอดคงเหลือ</h1>
+          {/* Figma 2:1342 (§ Balance Summary investigation, item 1): real
+              interpolation from the group already loaded on this page, not
+              a literal string — desktop's own frame (13:146/13:165) models
+              a DIFFERENT subtitle concept (a last-updated timestamp the API
+              doesn't provide anywhere), so this is mobile-only, same as
+              Group Detail's subtitle. */}
+          {data !== null && (
+            <p className="page-subtitle">{data.group.name} · สรุปเป็นภาษาง่าย ๆ</p>
+          )}
+        </div>
       </header>
 
       {error !== null && (
@@ -162,24 +173,49 @@ function Summary({
         <h2>ยอดของสมาชิกทุกคน</h2>
         <ul className="member-balances">
           {rows.map((row) => {
-            const label = nameOf(row.userId) + (row.userId === viewerId ? ' (คุณ)' : '')
+            const name = nameOf(row.userId)
+            const isViewer = row.userId === viewerId
+            // Figma 2:1360/2:1361 (§ Balance Summary investigation, item 3):
+            // despite the Figma layer name "Pending tag", this marks the
+            // viewer's OWN row — "คุณ / you" — not a membership-status
+            // indicator (§8.5's PENDING-absent-from-/balances rule doesn't
+            // apply here). Desktop's own frame (13:146, node 13:199) has no
+            // such pill at all; it bakes the same idea straight into the
+            // text ("... (คุณ) · ..."), which is exactly what was already
+            // shipped here. So both render: .you-text (plain suffix) is
+            // shown on desktop / hidden on mobile, .you-badge (the new
+            // pill, ds/color/brand-wash + ds/color/brand — an identity
+            // accent, not Group Detail's warning-toned PENDING tag, a
+            // different concept entirely) is shown on mobile / hidden on
+            // desktop (styles/desktop.css) — each breakpoint matches its
+            // own real Figma source, neither loses the "this is you"
+            // information.
+            const youMarker = isViewer && (
+              <>
+                <span className="you-text"> (คุณ)</span>
+                <span className="you-badge">คุณ / you</span>
+              </>
+            )
             if (row.net > ZERO) {
               return (
                 <li key={row.userId} className="net-pos">
-                  {label} — ควรได้รับคืน {formatMoney(row.net)}
+                  {name}
+                  {youMarker} — ควรได้รับคืน {formatMoney(row.net)}
                 </li>
               )
             }
             if (row.net < ZERO) {
               return (
                 <li key={row.userId} className="net-neg">
-                  {label} — ค้างชำระ {formatMoney(negateMoney(row.net))}
+                  {name}
+                  {youMarker} — ค้างชำระ {formatMoney(negateMoney(row.net))}
                 </li>
               )
             }
             return (
               <li key={row.userId} className="net-zero">
-                {label} — ไม่มียอดค้าง
+                {name}
+                {youMarker} — ไม่มียอดค้าง
               </li>
             )
           })}

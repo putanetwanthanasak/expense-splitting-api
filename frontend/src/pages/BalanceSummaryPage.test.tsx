@@ -121,8 +121,15 @@ describe('BalanceSummaryPage', () => {
     expect(summarySection).toHaveTextContent('├─สมชาย ควรจ่ายคุณ ฿150.00')
     expect(summarySection).toHaveTextContent('└─สมหญิง ควรจ่ายคุณ ฿100.00')
 
-    // per-member section
-    expect(screen.getByText('อลิซ (คุณ) — ควรได้รับคืน ฿250.00')).toBeInTheDocument()
+    // per-member section. The viewer's own row now carries a "this is
+    // you" marker as a separate element (§ Balance Summary investigation,
+    // item 3 — .you-text/.you-badge, toggled by breakpoint) rather than
+    // one flat string, so this checks textContent instead of an exact
+    // getByText match.
+    const viewerRow = document.querySelector('.member-balances li.net-pos')
+    expect(viewerRow).not.toBeNull()
+    expect(viewerRow).toHaveTextContent('อลิซ')
+    expect(viewerRow).toHaveTextContent('ควรได้รับคืน ฿250.00')
     expect(screen.getByText('สมชาย — ค้างชำระ ฿150.00')).toBeInTheDocument()
     expect(screen.getByText('สมหญิง — ค้างชำระ ฿100.00')).toBeInTheDocument()
   })
