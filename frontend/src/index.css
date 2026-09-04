@@ -234,12 +234,16 @@ a {
 
    Balance Summary 2:1332 joins the list too (§ Balance Summary
    investigation, item 4) — same #f4f7f6 fill, live-verified. Desktop
-   unaffected for the same <Sidebar> + .app-shell reason as Group Detail. */
+   unaffected for the same <Sidebar> + .app-shell reason as Group Detail.
+
+   Settle Up 2:1383 joins too (§ Settle Up investigation, item 4) — same
+   #f4f7f6 fill, live-verified. */
 body:has(.groups-page),
 body:has(.invitations-page),
 body:has(.group-detail-page),
 body:has(.auth-card),
-body:has(.balance-summary-page) {
+body:has(.balance-summary-page),
+body:has(.settle-up-page) {
   background: var(--ds-color-canvas);
 }
 
@@ -680,9 +684,16 @@ body:has(.balance-summary-page) {
   padding: 0.25rem 0 0.25rem 0.75rem;
 }
 
+/* Figma 2:1406 (§ Settle Up investigation, item 3): ds/color/text-faint +
+   16.2px (already what 0.9rem resolves to at the 18px base — matches
+   ds/size/mobile/subtitle exactly, no change needed there) — style only,
+   both paragraphs' content is untouched (see SettleUpPage.tsx). Border-left
+   accent is left as-is; only colour/size/position were part of this
+   decision. */
 .settle-note p {
   margin: 0.15rem 0;
   font-size: 0.9rem;
+  color: var(--ds-color-text-faint);
 }
 
 .notice {
@@ -703,6 +714,10 @@ body:has(.balance-summary-page) {
   gap: 0.5rem;
 }
 
+/* Figma 2:1396/2:1401/2:1409 (§ Settle Up investigation, item 5): each row
+   is its own white+shadow card, same treatment as Balance Summary's
+   member-standing rows — verified live, byte-identical DROP_SHADOW to
+   every other card on the site. */
 .transfer-row,
 .history-list li {
   display: flex;
@@ -713,6 +728,19 @@ body:has(.balance-summary-page) {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   font-variant-numeric: tabular-nums;
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-card);
+}
+
+/* Figma 2:1398/2:1403 (§ Settle Up investigation, item 1): both suggested-
+   transfer amounts bind to ds/color/danger — a real per-platform
+   difference from desktop's own frame (13:210, ds/color/brand), confirmed
+   live on both sides, not a bug on either. Scoped to .transfer-row only —
+   .history-list li strong (2:1414) binds to ds/color/brand instead (a
+   paid-off amount reads positive, not owed), so it's untouched here;
+   changing it wasn't part of this decision. */
+.transfer-row strong {
+  color: var(--ds-color-danger);
 }
 
 .transfer-row button {
@@ -746,12 +774,20 @@ body:has(.balance-summary-page) {
 
 /* Figma 2:1378 (§ Balance Summary investigation, item 5): row-wash fill, no
    stroke — matches this ONE frame's own binding (verified live). Deliberate
-   scope decision, not an oversight: .empty-state is shared by 4+ other
-   pages (Group Detail, Settle Up, Groups, Invitations) that haven't each
-   been individually re-verified against their own Figma frame yet, so this
-   stays scoped to .balance-summary-page rather than changing the shared
-   base rule (dashed border, no fill) for everyone. */
+   scope decision, not an oversight: .empty-state is shared by other pages
+   (Group Detail, Groups, Invitations) that haven't each been individually
+   re-verified against their own Figma frame yet, so this stays scoped to
+   .balance-summary-page rather than changing the shared base rule (dashed
+   border, no fill) for everyone. */
 .balance-summary-page .empty-state {
+  border: 0;
+  background: var(--ds-color-row-wash);
+}
+
+/* Figma 2:1415/2:1419 (§ Settle Up investigation, item 6): same row-wash
+   treatment, both empty states on this page bind identically — verified
+   live. Same scoping reasoning as Balance Summary's above. */
+.settle-up-page .empty-state {
   border: 0;
   background: var(--ds-color-row-wash);
 }
