@@ -692,13 +692,25 @@ button.secondary {
   color: var(--muted);
 }
 
-/* --- Phase 19: bottom nav (foundation only — component built and exported,
-   not wired into AppLayout; <NavBar> is still the live mobile nav). Styled
-   with ds/color/* tokens directly (not the legacy 8 vars above) since this
-   is new Phase-19 surface, not a migration of existing rules. There is no
-   ds/size/mobile/* token namespace yet (flagged in the Phase 19 report) —
-   the geometry here is hand-picked rem, same convention as every other
-   mobile-baseline rule in this file. */
+/* --- Phase 20: bottom nav, wired into AppLayout (Groups + Invitations only —
+   see AppLayout.tsx). Styled with ds/color/* tokens directly (not the legacy
+   8 vars above), same as when it was built in Phase 19. Still no
+   ds/size/mobile/* token namespace, so geometry stays hand-picked rem,
+   matching the rest of this file's mobile baseline. Hidden again above the
+   desktop breakpoint (styles/desktop.css), same treatment as .nav-bar. */
+
+:root {
+  /* Measured, not guessed, so .app-shell--bottom-nav's compensating padding
+     below can't drift from the real rendered height: border-top 1px + this
+     rule's own 0.5rem top/bottom padding (2 × 9px) + one .bottom-nav-item's
+     content (0.3rem top/bottom padding = 2 × 5.4px, 22px icon, 0.2rem gap =
+     3.6px, 0.75rem label at the inherited 1.5 line-height = 20.25px) — all at
+     this file's 18px rem base (--ds-size-base). 1 + 18 + 56.65 ≈ 75.65,
+     rounded up. env(safe-area-inset-bottom) is added on top where it's
+     consumed, not folded in here, since that inset is 0 on most viewports
+     and shouldn't inflate the number every reader sees. */
+  --bottom-nav-height: 76px;
+}
 
 .bottom-nav {
   position: fixed;
@@ -740,4 +752,15 @@ button.secondary {
   position: absolute;
   top: -0.3rem;
   right: -0.5rem;
+}
+
+/* Compensating bottom padding for the page content behind the fixed bottom
+   nav — applied only to .app-shell on the 2 routes that render <BottomNav>
+   (AppLayout adds this modifier class), and only below the desktop
+   breakpoint, where the bottom nav is actually visible (desktop.css hides
+   it and gives .app-shell its own padding via the sidebar layout instead). */
+@media (max-width: 1023.98px) {
+  .app-shell--bottom-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
 }

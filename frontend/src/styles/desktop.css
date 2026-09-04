@@ -165,6 +165,12 @@
     display: none;
   }
 
+  /* Same reasoning for the mobile bottom nav (Phase 20) — the sidebar is the
+     only nav surface at this breakpoint, on every route. */
+  .bottom-nav {
+    display: none;
+  }
+
   /* =====================================================================
      Phase 17 — page restyles: Login 7:2, Register 7:24, Groups 9:2,
      Invitations 10:16.
