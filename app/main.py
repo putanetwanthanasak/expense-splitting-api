@@ -3,8 +3,10 @@
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.routers import auth, expenses, groups, me, settlements, users
 
 app = FastAPI(
@@ -17,6 +19,21 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+
+# Cross-origin access for the deployed frontend. The allowed origins come from
+# the CORS_ALLOW_ORIGINS env var (comma-separated), never hardcoded — set it in
+# the backend host's dashboard to the real frontend URL(s). Left unset in local
+# dev, where the Vite dev server proxies /api and requests are same-origin, so
+# the middleware is only added when there is at least one origin to allow.
+_cors_origins = [o.strip() for o in settings.cors_allow_origins.split(",") if o.strip()]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(auth.router)
 app.include_router(users.router)
