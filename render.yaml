@@ -1,0 +1,67 @@
+# Render Blueprint — backend only (FastAPI + PostgreSQL).
+# The frontend (frontend/) deploys to Vercel; see DEPLOYMENT.md.
+#
+# Render reads this file from the repo root when you create a Blueprint.
+# It provisions one web service and one PostgreSQL database.
+#
+# Secrets are NOT in this file. JWT_SECRET and CORS_ALLOW_ORIGINS are marked
+# `sync: false`, which tells Render to prompt for them in the dashboard on the
+# first deploy and never read them from source control. DATABASE_URL is wired
+# straight from the managed database below.
+
+services:
+  - type: web
+    name: expense-splitting-api
+    runtime: python
+    plan: free # free web services cold-start after ~15 min idle; see DEPLOYMENT.md
+    region: singapore # closest Render region to Thailand; change if you prefer
+    branch: main
+    healthCheckPath: /health
+
+    # Build with uv, not pip. Render's Python image ships pip but not uv, so
+    # install uv first, then sync exactly what uv.lock pins (prod deps only).
+    buildCommand: "pip install uv && uv sync --locked --no-dev"
+
+    # Run migrations BEFORE uvicorn every boot. `preDeployCommand` would be the
+    # tidier home for this, but it is a paid-plan feature — on free it is
+    # silently skipped and the first deploy comes up against an unmigrated
+    # database. Chaining it into startCommand works on every plan. On a paid
+    # instance, move `uv run alembic upgrade head` to `preDeployCommand` and
+    # drop it from here.
+    startCommand: "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+
+    envVars:
+      # Pin the interpreter Render builds against (uv.lock targets 3.12).
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+
+      # Injected by Render from the managed database below. Render's connection
+      # string uses the postgres:// scheme; app/database.py normalizes it.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: expense-splitting-db
+          property: connectionString
+
+      # Prompted for in the dashboard on first deploy, never committed.
+      # Generate with:  python -c "import secrets; print(secrets.token_urlsafe(32))"
+      - key: JWT_SECRET
+        sync: false
+
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+
+      # Set this to the deployed Vercel URL AFTER the frontend exists
+      # (DEPLOYMENT.md, Part 3). Comma-separated, exact origins, no trailing
+      # slash. Leaving it blank is fine until then — the API just won't send
+      # CORS headers yet.
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
+
+databases:
+  - name: expense-splitting-db
+    plan: free # NOTE: Render's free PostgreSQL is deleted 90 days after creation
+    region: singapore
+    databaseName: expense_splitting
+    user: expense_splitting

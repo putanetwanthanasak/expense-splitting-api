@@ -15,5 +15,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # Comma-separated list of browser origins allowed to call this API
+    # cross-origin (e.g. the deployed frontend). Empty in local dev, where the
+    # Vite dev server proxies /api and the request is same-origin. Parsed and
+    # applied in app/main.py. Kept as a plain string, not list[str], because
+    # pydantic-settings JSON-decodes list-typed env vars and a bare
+    # "a,b" value would fail that decode.
+    cors_allow_origins: str = ""
+
 
 settings = Settings()  # type: ignore[call-arg]
