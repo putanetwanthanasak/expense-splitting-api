@@ -221,14 +221,40 @@ tests: `npm test`.
 
 ## Screenshots
 
-<!-- screenshot: Login -->
-<!-- screenshot: Register -->
-<!-- screenshot: Groups -->
-<!-- screenshot: Group detail -->
-<!-- screenshot: Add expense -->
-<!-- screenshot: Invitations -->
-<!-- screenshot: Balance summary -->
-<!-- screenshot: Settle up -->
+The frontend is Thai-language and mobile-first. These are captured from the
+running app at a 390px viewport, light mode, against throwaway demo data.
+
+**Login** — email + password on the app's canvas background
+
+![Login screen: a centred card with email and password fields above a green log-in button](docs/screenshots/login.png)
+
+**Register** — name, email and password, one green call to action
+
+![Registration screen: name, email and password fields above a create-account button](docs/screenshots/register.png)
+
+**Groups** — each row carries the viewer's own live net balance; the bottom nav badges the pending-invite count
+
+![Groups list: a create-group card above one group row showing a positive net balance, with a bottom navigation bar](docs/screenshots/groups.png)
+
+**Group detail** — members first, then the expense feed with each entry tagged by its split type
+
+![Group detail: a member list with avatars, then three expenses tagged as equal, exact and shares splits](docs/screenshots/group-detail.png)
+
+**Add expense** — mid-fill: a ฿100 equal split, live preview showing ฿33.34 / ฿33.33 / ฿33.33 and the +฿0.01 remainder tag
+
+![Add-expense form partly filled: a 100-baht equal split with a live preview of 33.34 / 33.33 / 33.33 and a one-cent remainder tag](docs/screenshots/add-expense.png)
+
+**Invitations** — a pending group invite with accept / decline actions
+
+![Invitations screen: one pending group invitation with accept and decline buttons](docs/screenshots/invitations.png)
+
+**Balance summary** — a highlighted "your standing" card over a per-member owed / owing breakdown, the current user badged
+
+![Balance summary: a highlighted your-standing card showing a positive balance, above a per-member owed and owing breakdown](docs/screenshots/balance-summary.png)
+
+**Settle up** — the reduced transfer list (two transfers into one member here), the greedy-matching disclaimer returned verbatim by the API, and an empty settlement history
+
+![Settle-up screen: two suggested transfers into one member, the greedy-matching disclaimer text, and an empty payment-history state](docs/screenshots/settle-up.png)
 
 ## Project layout
 
