@@ -12,9 +12,18 @@ then be careful about it.
 
 [![CI](https://github.com/putanetwanthanasak/expense-splitting-api/actions/workflows/ci.yml/badge.svg)](https://github.com/putanetwanthanasak/expense-splitting-api/actions/workflows/ci.yml)
 
-Not deployed anywhere yet — it runs locally (see [Running it](#running-it)). The
-full specification is in [`docs/SPEC.md`](docs/SPEC.md); the invariants that must
-always hold are summarized in [`CLAUDE.md`](CLAUDE.md).
+## Live demo
+
+- **App (Vercel):** https://expense-splitting-api.vercel.app
+- **API docs (Render, Swagger UI):** https://expense-splitting-api.onrender.com/docs
+
+The backend is on Render's free tier, which spins down after a period of
+inactivity. The first request after it has gone idle can take 30–50+ seconds
+while the service wakes up; it is not broken, just cold. Subsequent requests are
+fast.
+
+The full specification is in [`docs/SPEC.md`](docs/SPEC.md); the invariants that
+must always hold are summarized in [`CLAUDE.md`](CLAUDE.md).
 
 ## What it does
 
