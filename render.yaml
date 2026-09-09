@@ -2,12 +2,14 @@
 # The frontend (frontend/) deploys to Vercel; see DEPLOYMENT.md.
 #
 # Render reads this file from the repo root when you create a Blueprint.
-# It provisions one web service and one PostgreSQL database.
+# It provisions one web service. The database is NOT managed by Render — it's
+# an external Neon PostgreSQL instance (permanent free tier), provisioned
+# separately.
 #
-# Secrets are NOT in this file. JWT_SECRET and CORS_ALLOW_ORIGINS are marked
-# `sync: false`, which tells Render to prompt for them in the dashboard on the
-# first deploy and never read them from source control. DATABASE_URL is wired
-# straight from the managed database below.
+# Secrets are NOT in this file. DATABASE_URL, JWT_SECRET and CORS_ALLOW_ORIGINS
+# are marked `sync: false`, which tells Render to show them as empty fields in
+# the dashboard on the first deploy, to be filled in by hand, and never read
+# from source control.
 
 services:
   - type: web
@@ -35,12 +37,12 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.6"
 
-      # Injected by Render from the managed database below. Render's connection
-      # string uses the postgres:// scheme; app/database.py normalizes it.
+      # Paste the Neon connection string in the dashboard on first deploy.
+      # Neon gives a postgresql:// URL with ?sslmode=require — keep the query
+      # string; app/database.py rewrites the scheme to psycopg and leaves the
+      # rest intact.
       - key: DATABASE_URL
-        fromDatabase:
-          name: expense-splitting-db
-          property: connectionString
+        sync: false
 
       # Prompted for in the dashboard on first deploy, never committed.
       # Generate with:  python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -58,10 +60,3 @@ services:
       # CORS headers yet.
       - key: CORS_ALLOW_ORIGINS
         sync: false
-
-databases:
-  - name: expense-splitting-db
-    plan: free # NOTE: Render's free PostgreSQL is deleted 90 days after creation
-    region: singapore
-    databaseName: expense_splitting
-    user: expense_splitting
