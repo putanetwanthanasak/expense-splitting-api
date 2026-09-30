@@ -17,7 +17,9 @@ then be careful about it.
 - **App (Vercel):** https://expense-splitting-api.vercel.app
 - **API docs (Render, Swagger UI):** https://expense-splitting-api.onrender.com/docs
 
-The backend is on Render's free tier, which spins down after a period of
+The API runs as a Docker container on Render (built from the repo's
+`Dockerfile`, the same image `docker compose` runs locally), with PostgreSQL on
+Neon. It is on Render's free tier, which spins down after a period of
 inactivity. The first request after it has gone idle can take 30–50+ seconds
 while the service wakes up; it is not broken, just cold. Subsequent requests are
 fast.
@@ -243,8 +245,9 @@ The app is at `http://localhost:8080` and the API at `http://localhost:8000`
 (ports configurable with `WEB_PORT` / `API_PORT` in `.env`). Migrations run
 automatically when the API container starts, and data lives in the `pgdata`
 volume, so it survives `docker compose down`. Use `docker compose down -v` to
-wipe it. This setup is for local development only; production runs on Render
-and Vercel (see [DEPLOYMENT.md](DEPLOYMENT.md)).
+wipe it. In production the same API image runs as a Docker container on Render
+(with Neon for PostgreSQL); the frontend is on Vercel. See
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Screenshots
 
