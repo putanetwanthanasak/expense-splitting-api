@@ -1,0 +1,8 @@
+# Files executed or parsed inside Linux containers must keep LF line endings,
+# even when checked out on Windows with core.autocrlf=true — a CRLF shebang
+# line makes the kernel look for "/bin/sh\r" and the container fails to start.
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+Dockerfile.*  text eol=lf
+*.Dockerfile  text eol=lf
+nginx.conf    text eol=lf

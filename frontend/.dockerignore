@@ -1,0 +1,17 @@
+# Build context for the frontend image (frontend/Dockerfile).
+
+# Secrets — never bake them into an image layer. VITE_API_BASE_URL comes in
+# as a build arg instead.
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output are produced inside the image.
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite/
+*.log
+
+.git/

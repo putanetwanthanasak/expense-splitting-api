@@ -1,0 +1,86 @@
+# Local development stack: PostgreSQL 16 + FastAPI backend + nginx-served
+# frontend. Production does NOT use this file — the backend deploys to Render
+# (render.yaml) and the frontend to Vercel (frontend/vercel.json).
+#
+#   cp .env.example .env   # then fill in the Docker section
+#   docker compose up -d --build
+#
+# No secret is written in this file; all of them come from .env. The api
+# service gets the whole of .env via env_file, while db deliberately gets only
+# the three POSTGRES_* values, via compose's own ${VAR} interpolation (which
+# also reads .env).
+
+name: expense-splitting
+
+services:
+  db:
+    image: postgres:16
+    # Deliberately no env_file here: the database needs only these three
+    # values, not JWT_SECRET and the rest of .env.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No published port: only the api container talks to the database, and
+    # leaving 5432 unpublished avoids clashing with a locally installed Postgres.
+    healthcheck:
+      # -h 127.0.0.1 forces a TCP check. On first boot the image runs a
+      # temporary init server on the Unix socket only, then restarts; a
+      # socket-based pg_isready reports healthy during that window and the api
+      # migrates straight into "the database system is starting up".
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # Overrides the local-dev DATABASE_URL from .env (which points at
+      # localhost) with the compose network's db service.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # The web container is served from a different origin than the API, so
+      # the browser needs CORS. Derived from WEB_PORT rather than hardcoded;
+      # production keeps its own CORS_ALLOW_ORIGINS on Render, untouched.
+      CORS_ALLOW_ORIGINS: ${DOCKER_CORS_ALLOW_ORIGINS:-http://localhost:${WEB_PORT:-8080}}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # python:3.12-slim has no curl; use the interpreter already in the image.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the JS bundle at build time (see frontend/Dockerfile).
+        # This is the URL the *browser* uses, so it's the host-published port.
+        VITE_API_BASE_URL: ${DOCKER_VITE_API_BASE_URL:-http://localhost:${API_PORT:-8000}}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

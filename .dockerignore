@@ -1,0 +1,28 @@
+# Build context for the backend image (./Dockerfile). Only pyproject.toml,
+# uv.lock, alembic.ini, alembic/, app/ and docker-entrypoint.sh are needed.
+
+# Secrets — never bake them into an image layer.
+.env
+.env.*
+!.env.example
+
+# Environments, caches, build output
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+dist/
+node_modules/
+
+# Not part of the backend image
+.git/
+.github/
+.agents/
+frontend/
+tests/
+docs/
+scripts/
+*.md

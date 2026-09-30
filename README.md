@@ -228,6 +228,24 @@ npm run dev        # http://localhost:5173, proxies /api -> :8000
 Run the backend as well so the `/api` proxy has something to talk to. Frontend
 tests: `npm test`.
 
+### Run with Docker
+
+Alternatively, run the whole stack (PostgreSQL 16, API, nginx-served frontend)
+with only Docker installed:
+
+```bash
+cp .env.example .env      # set JWT_SECRET and POSTGRES_PASSWORD at minimum
+docker compose up -d --build
+docker compose ps         # wait until db, api and web are all (healthy)
+```
+
+The app is at `http://localhost:8080` and the API at `http://localhost:8000`
+(ports configurable with `WEB_PORT` / `API_PORT` in `.env`). Migrations run
+automatically when the API container starts, and data lives in the `pgdata`
+volume, so it survives `docker compose down`. Use `docker compose down -v` to
+wipe it. This setup is for local development only; production runs on Render
+and Vercel (see [DEPLOYMENT.md](DEPLOYMENT.md)).
+
 ## Screenshots
 
 The frontend is Thai-language and mobile-first. These are captured from the
