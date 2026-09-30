@@ -5,9 +5,10 @@
 #   cp .env.example .env   # then fill in the Docker section
 #   docker compose up -d --build
 #
-# No secret is written in this file. JWT_SECRET and the Postgres credentials
-# come from .env — via env_file for the containers, and via compose's own
-# ${VAR} interpolation (which also reads .env) where a value is assembled here.
+# No secret is written in this file; all of them come from .env. The api
+# service gets the whole of .env via env_file, while db deliberately gets only
+# the three POSTGRES_* values, via compose's own ${VAR} interpolation (which
+# also reads .env).
 
 name: expense-splitting
 
