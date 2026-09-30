@@ -14,23 +14,25 @@
 services:
   - type: web
     name: expense-splitting-api
-    runtime: python
+    # Built from the repo's ./Dockerfile — the same image `docker compose` runs
+    # locally. Switched from `runtime: python` in place: Render supports
+    # changing an existing service's runtime by editing this field and syncing
+    # the Blueprint (the dashboard can't do it). See DEPLOYMENT.md, "Rolling
+    # back to the native Python runtime".
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     plan: free # free web services cold-start after ~15 min idle; see DEPLOYMENT.md
     region: singapore # closest Render region to Thailand; change if you prefer
     branch: main
     healthCheckPath: /health
 
-    # Build with uv, not pip. Render's Python image ships pip but not uv, so
-    # install uv first, then sync exactly what uv.lock pins (prod deps only).
-    buildCommand: "pip install uv && uv sync --locked --no-dev"
-
-    # Run migrations BEFORE uvicorn every boot. `preDeployCommand` would be the
-    # tidier home for this, but it is a paid-plan feature — on free it is
-    # silently skipped and the first deploy comes up against an unmigrated
-    # database. Chaining it into startCommand works on every plan. On a paid
-    # instance, move `uv run alembic upgrade head` to `preDeployCommand` and
-    # drop it from here.
-    startCommand: "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    # No buildCommand/startCommand/dockerCommand: a Docker service builds from
+    # the Dockerfile and runs its ENTRYPOINT + CMD. Migrations run in exactly
+    # one place — docker-entrypoint.sh runs `alembic upgrade head` on every
+    # container start, then execs uvicorn on Render's injected $PORT. Don't add
+    # a migration here as well (and don't set dockerCommand, which would replace
+    # the CMD). `preDeployCommand` is paid-plan only; on free it is skipped.
 
     envVars:
       # Pin the interpreter Render builds against (uv.lock targets 3.12).

@@ -4,7 +4,7 @@ This repo is a **monorepo** with two independently deployed apps:
 
 | App | Lives in | Host | Config |
 |---|---|---|---|
-| Backend — FastAPI | repo root (`app/`, `alembic/`) | **Render** (web service) | `render.yaml` |
+| Backend — FastAPI | repo root (`app/`, `alembic/`) | **Render** (Docker web service) | `render.yaml` + `Dockerfile` |
 | Frontend — React + Vite | `frontend/` | **Vercel** | `frontend/vercel.json` |
 | Database — PostgreSQL | — | **Neon** (external, permanent free tier) | provisioned separately; connection string pasted into Render |
 
@@ -18,7 +18,7 @@ not used (its free tier is deleted 30 days after creation). `render.yaml` has no
                      │
                      │  fetch(VITE_API_BASE_URL + "/api/...")   [cross-origin]
                      ▼
-        https://expense-splitting-api.onrender.com ──► Render web service (uvicorn)
+        https://expense-splitting-api.onrender.com ──► Render web service (Docker container: uvicorn)
                      │
                      │  DATABASE_URL (Neon connection string, set by hand in Render)
                      ▼
@@ -52,8 +52,13 @@ know they exist:
 - **`frontend/src/lib/api.ts`** already reads the API base from
   `import.meta.env.VITE_API_BASE_URL` (falls back to `""` for the dev proxy) — no
   change needed, just set the var in Vercel.
-- **`render.yaml`** runs `alembic upgrade head` in the start command, before
-  uvicorn, on every boot.
+- **`render.yaml`** declares a **Docker** web service (`runtime: docker`) built
+  from the repo-root **`Dockerfile`** — the same image `docker compose` runs
+  locally. There is no build/start command in `render.yaml`.
+- **`docker-entrypoint.sh`** (the image's `ENTRYPOINT`) runs
+  `alembic upgrade head` on every container start, then `exec`s uvicorn on
+  Render's injected `$PORT` (falling back to 8000 locally). This is the only
+  place migrations run.
 
 ---
 
@@ -114,8 +119,10 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 1. Render builds the web service (there's no database for it to create — you're
    pointing it at Neon).
 2. Open the service → **Logs**. In order you should see:
-   - build: `pip install uv` then `uv sync --locked --no-dev`
-   - release/start: `alembic ... Running upgrade -> ...` for each migration
+   - build: the Docker build steps from `Dockerfile`, including
+     `uv sync --locked --no-dev --no-install-project`
+   - start: `alembic ... Running upgrade -> ...` for each pending migration
+     (just the `Context impl PostgresqlImpl` lines when already up to date)
    - `Uvicorn running on http://0.0.0.0:10000` (Render's injected `$PORT`)
 3. If migrations fail, the deploy fails here — fix forward and push; don't let a
    half-migrated database go live.
@@ -229,7 +236,7 @@ Done. From here, pushing to `main` redeploys both apps automatically.
 
 | Change | What to do |
 |---|---|
-| Backend code / new migration | Push to `main`. Render rebuilds; `alembic upgrade head` runs before uvicorn. |
+| Backend code / new migration | Push to `main`. Render rebuilds the Docker image; the entrypoint runs `alembic upgrade head` before uvicorn. |
 | Frontend code | Push to `main`. Vercel rebuilds. |
 | New allowed frontend origin | Edit `CORS_ALLOW_ORIGINS` in Render → save (triggers redeploy). |
 | Rotate `JWT_SECRET` | Set the new value in Render → redeploy. All existing tokens become invalid (users log in again). |
@@ -241,6 +248,8 @@ Done. From here, pushing to `main` redeploys both apps automatically.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| Render build fails at `uv sync --locked` | `uv.lock` out of date with `pyproject.toml` | Run `uv lock` locally, commit the lockfile, push. |
+| Render: `exec /usr/local/bin/docker-entrypoint.sh: no such file or directory` | `docker-entrypoint.sh` committed with CRLF line endings | `.gitattributes` forces LF; run `git add --renormalize .`, commit, push. |
 | Render build: `Can't load plugin: sqlalchemy.dialects:postgres` | `postgres://` scheme not normalized | Already handled in `app/database.py`; make sure you deployed a commit that includes it. |
 | Render deploy fails during `alembic upgrade head` | migration error, or a missing/malformed `DATABASE_URL` | Read the log line; check the web service's **Environment** has `DATABASE_URL` set to the full Neon string, `?sslmode=require` included. |
 | `alembic`/startup error: `connection ... SSL required` or timeout to `*.neon.tech` | `?sslmode=require` dropped from `DATABASE_URL`, or wrong Neon host/branch | Re-copy the string from the Neon console verbatim into Render. |
@@ -250,3 +259,31 @@ Done. From here, pushing to `main` redeploys both apps automatically.
 | API calls hit `https://api.onrender.com/api/api/...` | trailing `/api` left on `VITE_API_BASE_URL` | Value must be origin only. |
 | `500` on login/register, Render log shows JWT error | `JWT_SECRET` unset | Set it in Render → redeploy. |
 | Vercel build: "Couldn't find package.json" | Root Directory not set to `frontend` | Project → **Settings → General → Root Directory** → `frontend` → redeploy. |
+
+---
+
+## Rolling back to the native Python runtime
+
+The backend moved from Render's native Python runtime to Docker in place (same
+service, same URL, same env vars). If a Docker deploy breaks production:
+
+1. **Revert the switch in git.** On a branch off `main`, revert the commit that
+   changed `render.yaml`/`Dockerfile` (`git revert <merge-commit>`), open a PR,
+   let CI pass, merge. The reverted `render.yaml` is `runtime: python` with its
+   original `buildCommand` (`pip install uv && uv sync --locked --no-dev`) and
+   `startCommand` (`uv run alembic upgrade head && uv run uvicorn app.main:app
+   --host 0.0.0.0 --port $PORT`). `PYTHON_VERSION` was kept in `render.yaml`
+   throughout, so the native build pins 3.12 again with no dashboard edit.
+2. **Sync the Blueprint.** Render → **Blueprints** → this blueprint →
+   **Manual Sync** (if auto-sync didn't pick up the merge). The service switches
+   its runtime back to Python and redeploys. Runtime changes go through the
+   Blueprint or the API — the dashboard's service settings can't change runtime.
+3. **Verify:** the deploy log shows `pip install uv` / `uv sync`, then
+   `alembic ... upgrade`, then `Uvicorn running on http://0.0.0.0:10000`; and
+   `https://<render-url>/health` returns `{"status":"ok"}`.
+
+Nothing else needs undoing: env vars (including the secrets) are untouched by
+either direction, Neon is unaffected, and the Vercel frontend keeps calling the
+same URL. Both runtimes run the same `alembic upgrade head`, so the schema is
+compatible either way. **Do not** delete the service to "start fresh" — that
+changes its URL and breaks the frontend's baked-in `VITE_API_BASE_URL`.

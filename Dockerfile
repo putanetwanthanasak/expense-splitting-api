@@ -1,6 +1,6 @@
-# Backend image (FastAPI + Alembic) for local development via docker-compose.yml.
-# Production deploys to Render with its native Python runtime (render.yaml) and
-# does not use this file.
+# Backend image (FastAPI + Alembic). Used both for local development
+# (docker-compose.yml) and in production, where Render builds and runs it as a
+# Docker web service (render.yaml).
 
 # ---- build stage: resolve dependencies with uv from uv.lock -----------------
 FROM python:3.12-slim AS build
@@ -41,6 +41,9 @@ USER app
 
 EXPOSE 8000
 
-# Migrates the database, then execs uvicorn (see docker-entrypoint.sh).
+# Migrates the database, then execs the CMD (see docker-entrypoint.sh).
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render injects PORT (10000 by default); docker compose doesn't set it, so the
+# port falls back to 8000. Exec-form CMD can't expand ${PORT}, hence `sh -c`;
+# its `exec` replaces the shell, so uvicorn is still PID 1 and gets SIGTERM.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-8000}\""]
