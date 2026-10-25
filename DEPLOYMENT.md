@@ -253,6 +253,8 @@ Done. From here, pushing to `main` redeploys both apps automatically.
 | Render build: `Can't load plugin: sqlalchemy.dialects:postgres` | `postgres://` scheme not normalized | Already handled in `app/database.py`; make sure you deployed a commit that includes it. |
 | Render deploy fails during `alembic upgrade head` | migration error, or a missing/malformed `DATABASE_URL` | Read the log line; check the web service's **Environment** has `DATABASE_URL` set to the full Neon string, `?sslmode=require` included. |
 | `alembic`/startup error: `connection ... SSL required` or timeout to `*.neon.tech` | `?sslmode=require` dropped from `DATABASE_URL`, or wrong Neon host/branch | Re-copy the string from the Neon console verbatim into Render. |
+| Deploy fails with *"Application exited early"* right after merging a `runtime` change, then a second deploy of the same commit goes live | auto-deploy racing the Blueprint sync that applies the new runtime | Nothing to fix if the second deploy is live. See the note under [Rolling back](#rolling-back-to-the-native-python-runtime). |
+| Render logs show `HEAD /` or `GET /` → `404` | Render's port-detection probes; the API has no root route | Expected. Health is `/health`. |
 | First request after idle hangs ~50s | free-tier cold start (Render web service, and/or Neon auto-suspend) | Expected. Upgrade the web service to a paid instance to keep it warm. |
 | Frontend loads but every API call is a CORS error | `CORS_ALLOW_ORIGINS` unset, wrong, or has a trailing slash | Set it to the exact Vercel origin in Render; save; wait for redeploy. |
 | API calls go to `https://<vercel-url>/api/...` (404s on Vercel) | `VITE_API_BASE_URL` not set at build time | Set it in Vercel → **redeploy** (not just save). |
@@ -281,6 +283,28 @@ service, same URL, same env vars). If a Docker deploy breaks production:
 3. **Verify:** the deploy log shows `pip install uv` / `uv sync`, then
    `alembic ... upgrade`, then `Uvicorn running on http://0.0.0.0:10000`; and
    `https://<render-url>/health` returns `{"status":"ok"}`.
+
+> **Expect one failed deploy right after a `runtime` change.** When the switch
+> to Docker (#42, `7f87564`) merged, Render's **Events** showed two deploys of
+> the same commit:
+>
+> - 21:12 UTC, auto-deploy: **failed**, *"Application exited early"*
+> - 21:13 UTC, a second deploy with no commit label (the Blueprint sync):
+>   **live** at 21:14, runtime Docker, same `onrender.com` URL
+>
+> The failed deploy was most likely the push-triggered auto-deploy racing the
+> Blueprint sync that applies the new `runtime`. Its log wasn't captured, so
+> that's inferred, not proven. It doesn't point at the image: a later
+> **Manual Deploy → Deploy latest commit** of the same commit succeeded on its
+> own.
+>
+> Render doesn't swap in a failed deploy, so the previous one keeps serving
+> until the sync's deploy goes live. Rolling back changes `runtime` the same
+> way, so expect the same pattern. **Judge by the deploy after the sync, not
+> by the first failure** — don't start another rollback because of it. Check
+> Render → service → **Events**, where the sync's deploy has no commit label;
+> the GitHub commit shows both deploys as separate deployments. If the sync's
+> deploy fails too, that's a real failure: read its log.
 
 Nothing else needs undoing: env vars (including the secrets) are untouched by
 either direction, Neon is unaffected, and the Vercel frontend keeps calling the
